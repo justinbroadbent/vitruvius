@@ -1,0 +1,25 @@
+{
+  "displayName": "Require 'owner' tag on resources",
+  "description": "Validates that the 'owner' tag is present on resources. Per ADR 0010, owner is required at team granularity (not person names). Effect is parameterized to follow the Audit-before-Deny lifecycle in ADR 0008.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "tags['owner']",
+      "exists": "false"
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

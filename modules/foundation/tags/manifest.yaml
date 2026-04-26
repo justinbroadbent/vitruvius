@@ -1,0 +1,137 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: tags
+  area: foundation
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Authority on the tag taxonomy. Produces a tag map and ships the Azure Policy initiative that enforces it.
+
+spec:
+  inputs:
+    - name: owner
+      type: string
+      required: true
+      description: Accountable team alias (Backstage group, not a person name).
+      semantic: backstage-component
+    - name: env
+      type: string
+      required: true
+      description: Deployment environment.
+      vocabulary: [prod, staging, dev, sandbox]
+      semantic: tag-taxonomy-env
+    - name: cost_center
+      type: string
+      required: true
+      description: Cost-center code in the form 'cc-NNNN'.
+    - name: data_classification
+      type: string
+      required: true
+      description: Data sensitivity tier.
+      vocabulary: [public, internal, confidential, restricted]
+      semantic: tag-taxonomy-data-classification
+    - name: business_criticality
+      type: string
+      required: true
+      description: Recovery priority tier.
+      vocabulary: [tier-0, tier-1, tier-2, tier-3]
+      semantic: tag-taxonomy-business-criticality
+    - name: app
+      type: string
+      required: false
+      description: Optional application alias matching a Backstage component.
+    - name: component
+      type: string
+      required: false
+      description: Optional sub-component within an app.
+    - name: lifecycle_stage
+      type: string
+      required: false
+      description: Optional lifecycle stage. Emitted as the 'lifecycle' tag key.
+      vocabulary: [stable, experimental, deprecated]
+    - name: policy_management_group_id
+      type: string
+      required: false
+      description: Management group ID for policy deployment. When null, only the tag map is produced.
+    - name: policy_enforcement_mode
+      type: string
+      required: false
+      description: 'DoNotEnforce' (default, Audit-before-Deny) or 'Default' once promoted.
+      vocabulary: [DoNotEnforce, Default]
+    - name: policy_assignment_location
+      type: string
+      required: false
+      description: Region for the assignment's managed identity (required by Azure for modify-effect policies).
+
+  outputs:
+    - name: tags
+      type: map(string)
+      description: Tag map suitable for direct use as an Azure resource's tags argument.
+    - name: required_tags
+      type: map(string)
+      description: Subset containing only the five required tags.
+    - name: vocabularies
+      type: object
+      description: Allowed values per vocabulary-controlled tag.
+    - name: initiative_id
+      type: string
+      description: Resource ID of the tag-taxonomy initiative; null when policy is not deployed.
+    - name: policy_definition_ids
+      type: map(string)
+      description: Map of policy key to definition ID; empty when policy is not deployed.
+    - name: assignment_id
+      type: string
+      description: Resource ID of the initiative assignment; null when policy is not deployed.
+
+  dependencies:
+    avm: []
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: false
+    secrets: false
+    networking: false
+    naming: false
+    tagging: true
+
+  ships:
+    policy:
+      - require-tag-owner
+      - require-tag-env
+      - require-tag-cost-center
+      - require-tag-data-classification
+      - require-tag-business-criticality
+      - allowed-values-env
+      - allowed-values-data-classification
+      - allowed-values-business-criticality
+      - inherit-tag-from-resource-group
+      - vitruvius-tag-taxonomy
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0003
+      - ADR-0008
+      - ADR-0010
+    anti_patterns:
+      - AP-008
+
+  examples:
+    - name: minimal
+      description: Tag map only — no policy deployment. Suitable for any consumer that just wants the canonical tag map.
+    - name: full
+      description: Tag map plus policy initiative deployed and assigned at a management group, in DoNotEnforce mode.
+
+  tests:
+    - name: tag_map_compliance
+      type: terraform_test
+      description: Confirms the tag map contains the required keys and follows the vocabulary; verifies optional tags are present only when supplied.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms vocabulary-controlled inputs reject off-vocabulary values and that cost_center format is enforced.

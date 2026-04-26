@@ -1,0 +1,37 @@
+{
+  "displayName": "Inherit tag from resource group",
+  "description": "When a resource lacks the named tag and its parent resource group has it, copy the value down. Per ADR 0010, modify-effect inheritance reduces friction at create-time without sacrificing the schema at the resource level. The tag name is parameterized so the initiative can instantiate this policy once per required tag.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "[concat('tags[', parameters('tagName'), ']')]", "exists": "false" },
+        { "value": "[resourceGroup().tags[parameters('tagName')]]", "notEquals": "" }
+      ]
+    },
+    "then": {
+      "effect": "modify",
+      "details": {
+        "roleDefinitionIds": [
+          "/providers/microsoft.authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"
+        ],
+        "operations": [
+          {
+            "operation": "add",
+            "field": "[concat('tags[', parameters('tagName'), ']')]",
+            "value": "[resourceGroup().tags[parameters('tagName')]]"
+          }
+        ]
+      }
+    }
+  },
+  "parameters": {
+    "tagName": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Tag Name",
+        "description": "Name of the tag to inherit from the parent resource group."
+      }
+    }
+  }
+}

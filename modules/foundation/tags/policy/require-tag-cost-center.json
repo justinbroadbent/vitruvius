@@ -1,0 +1,25 @@
+{
+  "displayName": "Require 'cost-center' tag on resources",
+  "description": "Validates that the 'cost-center' tag is present. Per ADR 0010, cost-center enables automated cost allocation without per-resource reconciliation.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "tags['cost-center']",
+      "exists": "false"
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

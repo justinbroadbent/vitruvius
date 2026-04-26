@@ -1,0 +1,27 @@
+{
+  "displayName": "Allowed values for 'data-classification' tag",
+  "description": "Restricts the 'data-classification' tag to the controlled vocabulary defined in ADR 0010: public, internal, confidential, restricted.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "tags['data-classification']", "exists": "true" },
+        { "field": "tags['data-classification']", "notIn": ["public", "internal", "confidential", "restricted"] }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

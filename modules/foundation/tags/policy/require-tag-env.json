@@ -1,0 +1,25 @@
+{
+  "displayName": "Require 'env' tag on resources",
+  "description": "Validates that the 'env' tag is present. Per ADR 0010, env shapes policy enforcement tier (Audit in dev/sandbox, Deny in prod) and is required on every taggable resource.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "tags['env']",
+      "exists": "false"
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

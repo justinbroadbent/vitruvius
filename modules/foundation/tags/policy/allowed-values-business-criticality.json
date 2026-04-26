@@ -1,0 +1,27 @@
+{
+  "displayName": "Allowed values for 'business-criticality' tag",
+  "description": "Restricts the 'business-criticality' tag to the controlled vocabulary defined in ADR 0010: tier-0, tier-1, tier-2, tier-3.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "tags['business-criticality']", "exists": "true" },
+        { "field": "tags['business-criticality']", "notIn": ["tier-0", "tier-1", "tier-2", "tier-3"] }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

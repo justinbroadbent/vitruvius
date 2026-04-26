@@ -1,0 +1,27 @@
+{
+  "displayName": "Allowed values for 'env' tag",
+  "description": "Restricts the 'env' tag to the controlled vocabulary defined in ADR 0010: prod, staging, dev, sandbox. Reject 'production', 'PROD', 'environment=...', and other drift.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "tags['env']", "exists": "true" },
+        { "field": "tags['env']", "notIn": ["prod", "staging", "dev", "sandbox"] }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}
