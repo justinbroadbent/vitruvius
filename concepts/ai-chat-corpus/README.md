@@ -17,6 +17,20 @@ This repo is dense by design — a substantial citation web of principles, ADRs,
 
 A chat interface targeted at *querying* (not changing) the repo serves all four cases without putting the LLM in the merge path. This is consistent with the team's [AI usage thesis](../../docs/ai-usage.md): AI helps people read and find things; humans still author and approve.
 
+## Prerequisite: why not just Backstage Search?
+
+Backstage Search indexes TechDocs, the catalog, and arbitrary collators; it returns ranked document hits with links. For the *"find me the doc that answers this"* class of question — which is the bulk of stakeholder, new-engineer, and auditor traffic — Backstage Search is sufficient and it costs nothing beyond Backstage itself. If Backstage is being deployed for the catalog, search comes with it.
+
+This concept is only worth building if the team specifically wants generative answers — paraphrased synthesis across multiple documents, structured queries against the manifest index (e.g., *"which experimental ADRs have not been reviewed in 60 days?"*), and natural-language questions that don't map cleanly to a single doc hit. Backstage Search returns hits; this returns answers.
+
+Decision criteria before funding a build:
+
+1. **Is Backstage Search deployed and is its TechDocs index complete for this repo?** If no, do that first. Most of the value is there.
+2. **Have we observed real demand for synthesized answers?** If users are happy clicking the top three search hits, generative Q&A is solving a problem nobody has.
+3. **Is the structured-query path (manifest index, ADR frontmatter) actually load-bearing for any persona?** The architect-doing-weekly-review query is the strongest case; if architects can answer it from a generated `docs/decisions/README.md` already, the structured-query path doesn't earn its keep either.
+
+If the answers to (2) and (3) are no, the right move is to retire this concept in favor of a Backstage Search configuration writeup, not build it.
+
 ## The thesis
 
 A small number of opinionated, well-cited docs is unusually good RAG input. Most corporate wikis are the worst-case input for RAG — stale, fragmented, contradictory, low-density. This repo's structure is the opposite, and the structure is what makes the chat interface viable.
