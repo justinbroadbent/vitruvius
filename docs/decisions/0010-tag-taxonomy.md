@@ -1,0 +1,87 @@
+---
+id: 10
+title: Tag taxonomy is small, mandatory, vocabulary-controlled, operational
+status: accepted
+date: 2026-04-26
+categories: [foundation, governance]
+supersedes: []
+superseded_by: []
+cites_anti_patterns: [AP-008]
+cites_adrs: [ADR-0003, ADR-0008]
+---
+
+# ADR 0010 — Tag taxonomy is small, mandatory, vocabulary-controlled, operational
+
+## Context
+
+[AP-008 — Tag chaos](../anti-patterns.md#ap-008--tag-chaos) — free-form tags accumulate entropy. Cost-by-team reporting becomes manual. Policy targeting cannot rely on tags. Lifecycle automation cannot use tags as routing keys. Removing a tag breaks something nobody can identify.
+
+Tags are a schema. Without enforcement, the schema rots. The fix is a small required tag set, vocabulary-controlled values, automated enforcement, and operational hooks that make the tags do real work.
+
+## Decision
+
+A small, mandatory, vocabulary-controlled tag set governs every taggable resource in the estate.
+
+### Required tags (5)
+
+| Tag | Purpose | Example values |
+|---|---|---|
+| `owner` | accountable team alias | `platform-team`, `member-services` |
+| `env` | deployment environment | `prod`, `staging`, `dev`, `sandbox` |
+| `cost-center` | financial allocation | `cc-1001`, `cc-2002` |
+| `data-classification` | data sensitivity | `public`, `internal`, `confidential`, `restricted` |
+| `business-criticality` | recovery priority | `tier-0`, `tier-1`, `tier-2`, `tier-3` |
+
+### Optional tags (vocabulary-controlled)
+
+- `app` — application alias (free string, but matches an entry in the Backstage catalog)
+- `component` — sub-component within an app
+- `lifecycle` — `stable`, `experimental`, `deprecated`
+
+### Forbidden
+
+- Free-form tags outside the taxonomy.
+- Person-name tags (`owner=jane.doe`); ownership is at team granularity.
+- `temp`, `test`, `delete-me` — it is never temporary.
+- Inconsistent capitalization or spelling. `env=prod` is the only correct form; `env=Prod`, `Env=production`, `environment=PROD` are all rejected.
+
+### Enforcement
+
+- **Azure Policy `modify` effect** inherits required tags from resource group / subscription where the inheriting tag is missing on a child resource.
+- **Azure Policy `audit` and `deny` effects** govern allowed values. The lifecycle in [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) applies — new value restrictions ship in `Audit` mode before promotion.
+- The **`modules/foundation/tags`** module ships the policy assignments and the canonical vocabulary. Adding a value is a PR to the module.
+
+### Operational hooks (tags do real work, or they don't exist)
+
+- `data-classification=restricted` triggers customer-managed keys, private endpoints, and stricter diagnostic-setting retention.
+- `business-criticality=tier-0` triggers stricter SLA monitoring, geo-redundancy requirements, and PIM-only change paths.
+- `owner` drives alert routing (via Backstage catalog), access-review notifications, and quarterly review cadence.
+- `lifecycle=experimental` triggers a 30-day TTL job that warns and cleans up.
+- `env` shapes the policy enforcement tier (`Audit` in dev/sandbox, `Deny` in prod).
+- `cost-center` enables automated cost allocation reports without per-resource tagging review.
+
+### Governance
+
+Tag taxonomy changes go through ADR. Adding a new required tag is a breaking change managed deliberately — existing resources need a back-fill plan before the new requirement promotes from `Audit` to `Deny`. Adding a new value to an existing vocabulary is a normal change.
+
+## Consequences
+
+**Positive.**
+
+- Cost allocation is automatic and accurate; no manual reconciliation.
+- Policy targeting is reliable because values are vocabulary-controlled.
+- Lifecycle automation works because tags can be queried.
+- Operational tooling has a stable schema to build on.
+- New tags must justify themselves by doing operational work, which keeps the taxonomy small.
+
+**Negative — and accepted.**
+
+- Required tags must be supplied at create time; this adds friction at the moment of creation. The friction is paid once per resource and pays back at every cost report, audit, and policy targeting.
+- Vocabulary-controlled values mean teams cannot invent local conventions. We accept the constraint; the global taxonomy is more valuable than per-team flexibility.
+- Adding a new required tag is expensive (back-fill across the estate). We accept the expense; the alternative is taxonomy drift.
+
+## Cites
+
+- [AP-008](../anti-patterns.md#ap-008--tag-chaos) — what this ADR prevents.
+- [ADR 0003](./0003-modules-ship-policy-and-monitoring.md) — tag policy travels with the foundation/tags module.
+- [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) — value restrictions follow Audit-before-Deny.

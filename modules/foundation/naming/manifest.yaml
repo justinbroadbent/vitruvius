@@ -1,0 +1,88 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: naming
+  area: foundation
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Canonical Azure resource naming convention. Pure-logic module producing names from common inputs.
+
+spec:
+  inputs:
+    - name: org
+      type: string
+      required: true
+      description: Organization short code. 2-5 lowercase alphanumeric chars.
+      semantic: org-identity
+    - name: workload
+      type: string
+      required: true
+      description: Workload alias. Matches a Backstage catalog component.
+      semantic: backstage-component
+    - name: env
+      type: string
+      required: true
+      description: Environment. Matches the tag taxonomy in ADR 0010.
+      vocabulary: [prod, staging, dev, sandbox]
+      semantic: tag-taxonomy-env
+    - name: region
+      type: string
+      required: true
+      description: Azure region (long form, e.g., eastus).
+    - name: instance
+      type: string
+      required: false
+      description: Two-digit instance suffix. Default 01.
+
+  outputs:
+    - name: names
+      type: object
+      description: Map of resource type to canonical Azure resource name.
+    - name: region_abbr
+      type: string
+      description: Short code for the region used in names (e.g., eus for eastus).
+    - name: parts
+      type: object
+      description: Composed name parts (hyphen and compact forms) for consumers needing a resource type not yet in the names map.
+
+  dependencies:
+    avm: []
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: false
+    secrets: false
+    networking: false
+    naming: true
+    tagging: false
+
+  ships:
+    policy: []
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - utilitas
+      - venustas
+    decisions:
+      - ADR-0004
+      - ADR-0010
+    anti_patterns:
+      - AP-008
+
+  examples:
+    - name: minimal
+      description: Smallest invocation with required inputs only.
+    - name: full
+      description: Exercises the optional instance input and all output paths.
+
+  tests:
+    - name: convention_compliance
+      type: terraform_test
+      description: Confirms names conform to the documented convention and per-resource constraints.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (uppercase, special chars, off-vocabulary env) are rejected.

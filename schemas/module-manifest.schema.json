@@ -1,0 +1,251 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vitruvius.io/schemas/module-manifest/v1.json",
+  "title": "Vitruvius Module Manifest",
+  "description": "Structured contract for a Vitruvius module. See ADR 0011.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": {
+      "const": "vitruvius.io/v1",
+      "description": "Manifest schema version. Pinned to v1; schema evolution requires a new ADR."
+    },
+    "kind": {
+      "const": "Module"
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "area", "version", "status", "owner", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Module name. Lowercase, kebab-case."
+        },
+        "area": {
+          "enum": ["foundation", "networking", "platform-services", "workload-patterns"],
+          "description": "Top-level area within modules/."
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Semver. Bumped per the module's contract evolution."
+        },
+        "status": {
+          "enum": ["experimental", "beta", "stable", "deprecated"],
+          "description": "Pattern lifecycle stage; see ADR 0012."
+        },
+        "owner": {
+          "type": "string",
+          "pattern": "^[a-z0-9-]+$",
+          "description": "Team alias matching the Backstage catalog. Not a person name."
+        },
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 200,
+          "description": "One-line description. Read by Backstage and humans."
+        }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": [
+        "inputs",
+        "outputs",
+        "dependencies",
+        "cross_cutting",
+        "ships",
+        "cites",
+        "examples",
+        "tests"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "description": "Mirrors variables.tf. CI validates parity.",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "required", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string", "description": "Terraform type expression." },
+              "required": { "type": "boolean" },
+              "description": { "type": "string" },
+              "vocabulary": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Allowed values, if vocabulary-controlled."
+              },
+              "semantic": {
+                "type": "string",
+                "description": "Semantic tie to a repo concept (e.g., 'tag-taxonomy-env', 'backstage-component')."
+              }
+            }
+          }
+        },
+        "outputs": {
+          "type": "array",
+          "description": "Mirrors outputs.tf. CI validates parity.",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "dependencies": {
+          "type": "object",
+          "required": ["avm", "repo"],
+          "additionalProperties": false,
+          "properties": {
+            "avm": {
+              "type": "array",
+              "description": "Azure Verified Modules consumed by this module.",
+              "items": {
+                "type": "object",
+                "required": ["source", "version"],
+                "additionalProperties": false,
+                "properties": {
+                  "source": { "type": "string" },
+                  "version": { "type": "string" }
+                }
+              }
+            },
+            "repo": {
+              "type": "array",
+              "maxItems": 0,
+              "description": "Forbidden by ADR 0004. Must be empty. Modules in this repo do not depend on other modules in this repo."
+            }
+          }
+        },
+        "cross_cutting": {
+          "type": "object",
+          "description": "Which cross-cutting concerns this module participates in. See docs/golden-paths.md § 'Defining cross-cutting' for the canonical definition and the rationale for which concerns are on this list.",
+          "required": [
+            "identity",
+            "observability",
+            "secrets",
+            "networking",
+            "naming",
+            "tagging"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "identity": {
+              "type": "boolean",
+              "description": "Set true if this module establishes or modifies identity primitives (managed identities, role assignments, federated identity bindings)."
+            },
+            "observability": {
+              "type": "boolean",
+              "description": "Set true if this module emits, configures, or hosts observability signals (diagnostic settings, OTel collectors, dashboards). Modules with this true must populate spec.ships.monitoring."
+            },
+            "secrets": {
+              "type": "boolean",
+              "description": "Set true if this module manages secret material (Key Vault wiring, rotation handlers, CSI driver integration). See ADR 0009 — secrets are ephemeral by default."
+            },
+            "networking": {
+              "type": "boolean",
+              "description": "Set true if this module shapes network topology or affects traffic flow (VNets, subnets, private endpoints, NSGs, service mesh, APIM)."
+            },
+            "naming": {
+              "type": "boolean",
+              "description": "Set true only if this module is the authority on resource names. In practice, only foundation/naming sets this."
+            },
+            "tagging": {
+              "type": "boolean",
+              "description": "Set true if this module establishes or enforces the tag taxonomy. In practice, only foundation/tags sets this. See ADR 0010."
+            }
+          }
+        },
+        "ships": {
+          "type": "object",
+          "description": "Artifacts shipped with the module per ADR 0003.",
+          "required": ["policy", "monitoring", "runbooks"],
+          "additionalProperties": false,
+          "properties": {
+            "policy": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Azure Policy assignment / initiative names in policy/."
+            },
+            "monitoring": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Alert / workbook / dashboard names in monitoring/."
+            },
+            "runbooks": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Runbook references."
+            }
+          }
+        },
+        "cites": {
+          "type": "object",
+          "required": ["principles", "decisions", "anti_patterns"],
+          "additionalProperties": false,
+          "properties": {
+            "principles": {
+              "type": "array",
+              "items": { "enum": ["firmitas", "utilitas", "venustas"] }
+            },
+            "decisions": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^ADR-[0-9]{4}$"
+              },
+              "description": "ADR IDs cited by this module (e.g., ADR-0003)."
+            },
+            "anti_patterns": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^AP-[0-9]{3}$"
+              },
+              "description": "Anti-pattern IDs this module helps prevent (e.g., AP-001)."
+            }
+          }
+        },
+        "examples": {
+          "type": "array",
+          "description": "Examples in examples/ subdirs. CI validates each named example exists.",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "tests": {
+          "type": "array",
+          "description": "Tests in tests/. CI validates each named test exists.",
+          "items": {
+            "type": "object",
+            "required": ["name", "type", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "name": { "type": "string" },
+              "type": {
+                "enum": ["terraform_test", "terratest", "policy_test"]
+              },
+              "description": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
