@@ -1,0 +1,152 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: web-api-aks
+  area: workload-patterns
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Workload pattern for a containerized web API on AKS. Provisions workload identity, Key Vault, federated credential, and the policy initiative that hardens them.
+
+spec:
+  inputs:
+    - name: user_assigned_identity_name
+      type: string
+      required: true
+      description: Pre-computed UAI name (from foundation/naming).
+      semantic: foundation-naming
+    - name: key_vault_name
+      type: string
+      required: true
+      description: Pre-computed Key Vault name (from foundation/naming).
+      semantic: foundation-naming
+    - name: resource_group_name
+      type: string
+      required: true
+      description: Resource group where the workload's UAI and KV are created.
+    - name: location
+      type: string
+      required: true
+      description: Azure region for the workload's resources.
+    - name: tags
+      type: map(string)
+      required: true
+      description: Tag map from foundation/tags. Module validates the five required keys are present.
+      semantic: foundation-tags
+    - name: aks_oidc_issuer_url
+      type: string
+      required: true
+      description: OIDC issuer URL of the AKS cluster the workload runs on. Used to build the federated identity credential.
+    - name: aks_namespace
+      type: string
+      required: true
+      description: Kubernetes namespace where the workload's pods run.
+    - name: aks_service_account_name
+      type: string
+      required: true
+      description: Kubernetes ServiceAccount the workload's pods authenticate as.
+    - name: log_analytics_workspace_id
+      type: string
+      required: true
+      description: Resource ID of the platform LAW that receives KV diagnostic logs.
+      semantic: substrate-law
+    - name: key_vault_sku
+      type: string
+      required: false
+      description: KV SKU.
+      vocabulary: [standard, premium]
+    - name: key_vault_soft_delete_retention_days
+      type: number
+      required: false
+      description: Soft-delete window in days (7-90).
+    - name: policy_assignment_scope
+      type: string
+      required: false
+      description: When supplied, the KV-hardening initiative is assigned at this subscription scope.
+    - name: policy_definition_subscription_id
+      type: string
+      required: true
+      description: Subscription where policy definitions and the initiative are created.
+    - name: policy_enforcement_mode
+      type: string
+      required: false
+      description: 'DoNotEnforce' for the Audit phase (ADR 0008); 'Default' once promoted.
+      vocabulary: [DoNotEnforce, Default]
+
+  outputs:
+    - name: workload_identity_client_id
+      type: string
+      description: UAI client ID. Annotate the K8s ServiceAccount with this.
+    - name: workload_identity_principal_id
+      type: string
+      description: UAI principal/object ID. For external role-assignment grants.
+    - name: workload_identity_id
+      type: string
+      description: UAI resource ID.
+    - name: key_vault_id
+      type: string
+      description: KV resource ID.
+    - name: key_vault_uri
+      type: string
+      description: KV URI for application configuration.
+    - name: service_account_annotations
+      type: map(string)
+      description: Annotations the app team applies to the K8s ServiceAccount for workload-identity federation.
+    - name: policy_initiative_id
+      type: string
+      description: Initiative resource ID (always created).
+    - name: policy_assignment_id
+      type: string
+      description: Assignment ID; null when policy_assignment_scope is not supplied.
+
+  dependencies:
+    avm:
+      - source: Azure/avm-res-keyvault-vault/azurerm
+        version: ~> 0.10
+    repo: []
+
+  cross_cutting:
+    identity: true
+    observability: true
+    secrets: true
+    networking: false
+    naming: false
+    tagging: false
+
+  ships:
+    policy:
+      - keyvault-purge-protection-required
+      - keyvault-rbac-authorization-required
+      - keyvault-diagnostic-settings-required
+      - vitruvius-web-api-aks-keyvault
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0001
+      - ADR-0003
+      - ADR-0005
+      - ADR-0008
+      - ADR-0009
+      - ADR-0010
+    anti_patterns:
+      - AP-001
+      - AP-006
+
+  examples:
+    - name: minimal
+      description: Smallest viable invocation. Required inputs only; policy initiative created but not assigned.
+    - name: full
+      description: All optional inputs supplied; policy initiative assigned at the subscription in DoNotEnforce mode.
+
+  tests:
+    - name: contract_compliance
+      type: terraform_test
+      description: Confirms the module produces the documented outputs, the federated credential subject is built correctly, and the KV diagnostic setting is wired to the supplied LAW.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (malformed names, off-vocabulary SKU, missing required tags, bad OIDC URL) are rejected.

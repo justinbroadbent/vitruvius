@@ -1,0 +1,27 @@
+{
+  "displayName": "Key Vault must use RBAC authorization (not access policies)",
+  "description": "RBAC-on-Key-Vault unifies access control with the rest of Azure (PIM-eligible, conditional access, scoped role assignments). Access policies are a parallel auth mechanism that escapes the substrate. Required for new vaults; legacy access-policy vaults migrate via separate exemption-tracked work.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "type", "equals": "Microsoft.KeyVault/vaults" },
+        { "field": "Microsoft.KeyVault/vaults/enableRbacAuthorization", "notEquals": true }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

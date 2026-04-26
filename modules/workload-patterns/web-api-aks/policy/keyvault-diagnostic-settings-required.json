@@ -1,0 +1,35 @@
+{
+  "displayName": "Key Vault must have diagnostic settings to a Log Analytics workspace",
+  "description": "Audit logs (key access, secret access, vault administration) must flow to the platform's Log Analytics workspace per ADR 0005. AuditIfNotExists effect: detects vaults without the required diagnostic-setting child resource.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "type",
+      "equals": "Microsoft.KeyVault/vaults"
+    },
+    "then": {
+      "effect": "[parameters('effect')]",
+      "details": {
+        "type": "Microsoft.Insights/diagnosticSettings",
+        "existenceCondition": {
+          "anyOf": [
+            { "field": "Microsoft.Insights/diagnosticSettings/workspaceId", "exists": "true" },
+            { "field": "Microsoft.Insights/diagnosticSettings/storageAccountId", "exists": "true" },
+            { "field": "Microsoft.Insights/diagnosticSettings/eventHubAuthorizationRuleId", "exists": "true" }
+          ]
+        }
+      }
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "AuditIfNotExists or Disabled. Defaults to AuditIfNotExists per ADR 0008. DeployIfNotExists is intentionally not offered — the module's deployment is the source of the diagnostic setting; the policy detects drift, it does not heal."
+      },
+      "allowedValues": ["AuditIfNotExists", "Disabled"],
+      "defaultValue": "AuditIfNotExists"
+    }
+  }
+}

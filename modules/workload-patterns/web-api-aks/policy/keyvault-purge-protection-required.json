@@ -1,0 +1,27 @@
+{
+  "displayName": "Key Vault must have purge protection enabled",
+  "description": "Soft-delete alone is reversible by anyone with delete permissions. Purge protection prevents permanent deletion within the soft-delete window. Required by audit; default behavior in azurerm v4+, but explicit enforcement catches drift.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "type", "equals": "Microsoft.KeyVault/vaults" },
+        { "field": "Microsoft.KeyVault/vaults/enablePurgeProtection", "notEquals": true }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}
