@@ -1,0 +1,76 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: identity
+  area: foundation
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Platform-baseline user-assigned managed identities. Identity primitives only — no roles, no assignments, no federation.
+
+spec:
+  inputs:
+    - name: resource_group_name
+      type: string
+      required: true
+      description: Resource group where the platform UAIs are created.
+    - name: location
+      type: string
+      required: true
+      description: Azure region for the UAIs.
+    - name: tags
+      type: map(string)
+      required: true
+      description: Tag map from foundation/tags. Five required keys from ADR 0010 enforced by validation.
+      semantic: foundation-tags
+    - name: deploy_identity_name
+      type: string
+      required: false
+      description: Name override for the deploy UAI. Defaults to 'id-platform-deploy'.
+    - name: policy_remediation_identity_name
+      type: string
+      required: false
+      description: Name override for the policy-remediation UAI. Defaults to 'id-platform-policy-remediation'.
+
+  outputs:
+    - name: deploy
+      type: object
+      description: Deploy UAI metadata (id, principal_id, client_id, tenant_id, name).
+    - name: policy_remediation
+      type: object
+      description: Policy-remediation UAI metadata (id, principal_id, client_id, tenant_id, name).
+
+  dependencies:
+    avm: []
+    repo: []
+
+  cross_cutting:
+    identity: true
+    observability: false
+    secrets: false
+    networking: false
+    naming: false
+    tagging: false
+
+  ships:
+    policy: []
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0009
+    anti_patterns:
+      - AP-006
+
+  examples:
+    - name: minimal
+      description: Provisions both platform UAIs with default names.
+
+  tests:
+    - name: identity_compliance
+      type: terraform_test
+      description: Confirms both UAIs are created with the correct names, tags are propagated, and the output structure matches the documented contract.
