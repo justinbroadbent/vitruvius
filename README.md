@@ -39,7 +39,7 @@ vitruvius/
     decisions/              # ADRs (each cites the anti-patterns it addresses)
       README.md             # generated index, grouped by category and status
   modules/
-    foundation/             # naming, tagging, diagnostic-settings, identity
+    foundation/             # naming, tags, diagnostic-settings, identity
     networking/             # hub, spoke, private-endpoint patterns
     platform-services/      # observability, secrets, container-registry
     workload-patterns/      # web-api-aks, function-event-driven, data-pipeline,
@@ -61,9 +61,21 @@ vitruvius/
     copilot-instructions.md # → AGENTS.md
 ```
 
-## Quickstart
+## What's runnable today (v0.1.0)
 
-This repo is in active scaffolding. The first runnable artifact will be `modules/foundation/naming` — see `AGENTS.md` for the conventions every new module must follow.
+Four foundation modules and one workload pattern. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
+
+| Layer | Module | What it does |
+|---|---|---|
+| foundation | [`naming`](./modules/foundation/naming/) | Canonical Azure resource names (pure-logic). |
+| foundation | [`tags`](./modules/foundation/tags/) | Tag taxonomy + the policy initiative that enforces it. |
+| foundation | [`diagnostic-settings`](./modules/foundation/diagnostic-settings/) | Substrate-routing safety-net policy initiative. |
+| foundation | [`identity`](./modules/foundation/identity/) | Platform-baseline managed identities (deliberately minimal). |
+| workload-pattern | [`web-api-aks`](./modules/workload-patterns/web-api-aks/) | Containerized HTTP API on AKS — workload identity, KV via AVM, hardening initiative. |
+
+Directories with stub READMEs (`modules/networking/`, `modules/platform-services/`, `examples/`, `policies/ncua-glba/`) document scope that's been thought through but not yet built.
+
+See [`AGENTS.md`](./AGENTS.md) for the conventions every new module must follow, and [`modules/foundation/README.md`](./modules/foundation/README.md) for the foundation layer's overview.
 
 ## License
 
