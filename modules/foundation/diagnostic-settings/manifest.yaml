@@ -1,0 +1,102 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: diagnostic-settings
+  area: foundation
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Substrate-routing safety net. Ships the policy initiative that routes diagnostic settings from common Azure resources to the platform Log Analytics workspace.
+
+spec:
+  inputs:
+    - name: policy_management_group_id
+      type: string
+      required: false
+      description: Management group ID where the initiative is created. When null, the module is a no-op.
+    - name: log_analytics_workspace_id
+      type: string
+      required: false
+      description: Resource ID of the platform LAW. Required when policy_management_group_id is supplied.
+      semantic: substrate-law
+    - name: policy_assignment_scope
+      type: string
+      required: false
+      description: MG ID where the initiative is assigned. When null, the initiative is created but not assigned.
+    - name: policy_enforcement_mode
+      type: string
+      required: false
+      description: 'DoNotEnforce' (default; Audit-before-Deny per ADR 0008) or 'Default'.
+      vocabulary: [DoNotEnforce, Default]
+    - name: policy_effect
+      type: string
+      required: false
+      description: Initiative-wide effect. Defaults to AuditIfNotExists per ADR 0008. Promote to DeployIfNotExists once Audit-mode evidence supports it.
+      vocabulary: [AuditIfNotExists, DeployIfNotExists, Disabled]
+    - name: policy_assignment_location
+      type: string
+      required: false
+      description: Region for the assignment's managed identity (required by Azure for DeployIfNotExists policies).
+
+  outputs:
+    - name: covered_resource_types
+      type: list(string)
+      description: Sorted list of Azure resource types the initiative covers.
+    - name: initiative_id
+      type: string
+      description: Initiative resource ID; null when policy is not deployed.
+    - name: policy_definition_ids
+      type: map(string)
+      description: Map of policy key to definition ID; empty when policy is not deployed.
+    - name: assignment_id
+      type: string
+      description: Assignment ID; null when policy_assignment_scope is not supplied.
+
+  dependencies:
+    avm: []
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: true
+    secrets: false
+    networking: false
+    naming: false
+    tagging: false
+
+  ships:
+    policy:
+      - keyvault-route-to-substrate
+      - aks-route-to-substrate
+      - service-bus-route-to-substrate
+      - app-service-route-to-substrate
+      - apim-route-to-substrate
+      - vitruvius-substrate-diagnostic-settings
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0003
+      - ADR-0005
+      - ADR-0008
+    anti_patterns:
+      - AP-001
+      - AP-002
+
+  examples:
+    - name: minimal
+      description: Definitions and initiative created at a management group; no assignment (handled at a higher scope).
+    - name: full
+      description: Full deployment — definitions, initiative, and assignment, all in DoNotEnforce mode and AuditIfNotExists effect for the Audit period.
+
+  tests:
+    - name: policy_compliance
+      type: terraform_test
+      description: Confirms the initiative bundles all five resource-type policies, the covered_resource_types output enumerates them, and the assignment respects the no-op / no-assignment / assigned modes.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (off-vocabulary effect, malformed LAW ID, off-vocabulary enforcement mode) are rejected.

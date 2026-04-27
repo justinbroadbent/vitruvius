@@ -1,0 +1,70 @@
+{
+  "displayName": "App Service / Function App must route diagnostic settings to the substrate LAW",
+  "description": "Detects (or deploys) a diagnostic setting on every Microsoft.Web/sites resource routing HTTP/console/audit/IPSec logs to the platform Log Analytics workspace. Note: deployment slots are sub-resources and require a separate policy (deferred to v0.2 — covered slots are an advanced case).",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "type",
+      "equals": "Microsoft.Web/sites"
+    },
+    "then": {
+      "effect": "[parameters('effect')]",
+      "details": {
+        "type": "Microsoft.Insights/diagnosticSettings",
+        "name": "vitruvius-substrate-routing",
+        "existenceCondition": {
+          "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
+          "exists": "true"
+        },
+        "roleDefinitionIds": [
+          "/providers/microsoft.authorization/roleDefinitions/749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+          "/providers/microsoft.authorization/roleDefinitions/92aaf0da-9dab-42b6-94a3-d43ce8d16293"
+        ],
+        "deployment": {
+          "properties": {
+            "mode": "incremental",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "parameters": {
+                "resourceName": { "type": "string" },
+                "logAnalyticsWorkspaceId": { "type": "string" }
+              },
+              "resources": [
+                {
+                  "type": "Microsoft.Web/sites/providers/diagnosticSettings",
+                  "apiVersion": "2021-05-01-preview",
+                  "name": "[concat(parameters('resourceName'), '/Microsoft.Insights/vitruvius-substrate-routing')]",
+                  "properties": {
+                    "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                    "logs": [{ "categoryGroup": "allLogs", "enabled": true }],
+                    "metrics": [{ "category": "AllMetrics", "enabled": true }]
+                  }
+                }
+              ]
+            },
+            "parameters": {
+              "resourceName": { "value": "[field('name')]" },
+              "logAnalyticsWorkspaceId": { "value": "[parameters('logAnalyticsWorkspaceId')]" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": { "displayName": "Effect" },
+      "allowedValues": ["AuditIfNotExists", "DeployIfNotExists", "Disabled"],
+      "defaultValue": "AuditIfNotExists"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Log Analytics Workspace ID",
+        "description": "Resource ID of the platform LAW that receives diagnostic logs."
+      }
+    }
+  }
+}

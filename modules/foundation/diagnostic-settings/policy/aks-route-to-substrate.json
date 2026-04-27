@@ -1,0 +1,78 @@
+{
+  "displayName": "AKS cluster must route diagnostic settings to the substrate LAW",
+  "description": "Detects (or deploys) a diagnostic setting on every AKS managed cluster routing control-plane logs (kube-apiserver, kube-audit, kube-audit-admin, kube-controller-manager, kube-scheduler, cluster-autoscaler, guard) to the platform Log Analytics workspace. Container Insights metrics flow separately via OMS agent on the cluster (configured in the AKS module itself).",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "field": "type",
+      "equals": "Microsoft.ContainerService/managedClusters"
+    },
+    "then": {
+      "effect": "[parameters('effect')]",
+      "details": {
+        "type": "Microsoft.Insights/diagnosticSettings",
+        "name": "vitruvius-substrate-routing",
+        "existenceCondition": {
+          "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
+          "exists": "true"
+        },
+        "roleDefinitionIds": [
+          "/providers/microsoft.authorization/roleDefinitions/749f88d5-cbae-40b8-bcfc-e573ddc772fa",
+          "/providers/microsoft.authorization/roleDefinitions/92aaf0da-9dab-42b6-94a3-d43ce8d16293"
+        ],
+        "deployment": {
+          "properties": {
+            "mode": "incremental",
+            "template": {
+              "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+              "contentVersion": "1.0.0.0",
+              "parameters": {
+                "resourceName": { "type": "string" },
+                "logAnalyticsWorkspaceId": { "type": "string" }
+              },
+              "resources": [
+                {
+                  "type": "Microsoft.ContainerService/managedClusters/providers/diagnosticSettings",
+                  "apiVersion": "2021-05-01-preview",
+                  "name": "[concat(parameters('resourceName'), '/Microsoft.Insights/vitruvius-substrate-routing')]",
+                  "properties": {
+                    "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                    "logs": [
+                      { "category": "kube-apiserver", "enabled": true },
+                      { "category": "kube-audit", "enabled": true },
+                      { "category": "kube-audit-admin", "enabled": true },
+                      { "category": "kube-controller-manager", "enabled": true },
+                      { "category": "kube-scheduler", "enabled": true },
+                      { "category": "cluster-autoscaler", "enabled": true },
+                      { "category": "guard", "enabled": true }
+                    ],
+                    "metrics": [{ "category": "AllMetrics", "enabled": true }]
+                  }
+                }
+              ]
+            },
+            "parameters": {
+              "resourceName": { "value": "[field('name')]" },
+              "logAnalyticsWorkspaceId": { "value": "[parameters('logAnalyticsWorkspaceId')]" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": { "displayName": "Effect" },
+      "allowedValues": ["AuditIfNotExists", "DeployIfNotExists", "Disabled"],
+      "defaultValue": "AuditIfNotExists"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Log Analytics Workspace ID",
+        "description": "Resource ID of the platform LAW that receives diagnostic logs."
+      }
+    }
+  }
+}
