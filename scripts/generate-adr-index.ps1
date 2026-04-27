@@ -76,7 +76,10 @@ function ConvertFrom-SimpleFrontmatter {
 
 function Get-Adrs {
     $adrs = @()
-    Get-ChildItem -Path $adrDir -Filter '[0-9]*-*.md' | Sort-Object Name | ForEach-Object {
+    # Filter via Where-Object rather than -Filter; PowerShell's -Filter on
+    # non-Windows uses a different glob engine that doesn't honor the
+    # bracket-class pattern. The regex is explicit and portable.
+    Get-ChildItem -Path $adrDir -File | Where-Object { $_.Name -match '^[0-9]{4}-.*\.md$' } | Sort-Object Name | ForEach-Object {
         $text = Get-Content -Raw -LiteralPath $_.FullName
         $meta = ConvertFrom-SimpleFrontmatter -Text $text
         if ($null -eq $meta) {

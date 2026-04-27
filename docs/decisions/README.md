@@ -21,6 +21,9 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 | [0010](0010-tag-taxonomy.md) | Tag taxonomy is small, mandatory, vocabulary-controlled, operational | accepted | foundation, governance | 2026-04-26 |
 | [0011](0011-module-manifest.md) | Module manifest as the structured contract for every module | accepted | foundation, architecture, ai | 2026-04-26 |
 | [0012](0012-collaborative-design.md) | Collaborative design — practices that prevent design-in-vacuum | accepted | process, culture | 2026-04-26 |
+| [0013](0013-platform-metrics-and-dora.md) | Platform health is measured; DORA is the starting frame | accepted | observability, change-management, governance | 2026-04-27 |
+| [0014](0014-slos-as-a-discipline.md) | SLOs are a per-workload discipline; the platform provides the framework, not the targets | accepted | observability, governance | 2026-04-27 |
+| [0015](0015-disaster-recovery-and-business-continuity.md) | Disaster recovery is per-workload; the platform provides the primitives | accepted | governance, security, foundation | 2026-04-27 |
 
 ## By category
 
@@ -33,6 +36,10 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0004](0004-composition-by-output-data.md) — Composition is by output data; no orchestrator modules
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
 
+### change-management
+
+- [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
+
 ### culture
 
 - [0012](0012-collaborative-design.md) — Collaborative design — practices that prevent design-in-vacuum
@@ -44,6 +51,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0004](0004-composition-by-output-data.md) — Composition is by output data; no orchestrator modules
 - [0010](0010-tag-taxonomy.md) — Tag taxonomy is small, mandatory, vocabulary-controlled, operational
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
+- [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 
 ### governance
 
@@ -51,6 +59,9 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0007](0007-change-as-code.md) — Change management as code; break-glass is documented
 - [0008](0008-audit-before-deny-policy-lifecycle.md) — Audit-before-Deny policy lifecycle; exemptions are first-class
 - [0010](0010-tag-taxonomy.md) — Tag taxonomy is small, mandatory, vocabulary-controlled, operational
+- [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
+- [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
+- [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 
 ### infrastructure
 
@@ -68,6 +79,8 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 
 - [0002](0002-observability-otel-first.md) — Observability is OpenTelemetry-first, emission target is configuration
 - [0005](0005-observability-substrate-and-signal-parity.md) — Centralized observability substrate with federated curation; signal parity across environments
+- [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
+- [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
 
 ### process
 
@@ -79,10 +92,11 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0007](0007-change-as-code.md) — Change management as code; break-glass is documented
 - [0008](0008-audit-before-deny-policy-lifecycle.md) — Audit-before-Deny policy lifecycle; exemptions are first-class
 - [0009](0009-secrets-ephemeral-by-default.md) — Secrets are ephemeral by default; static secrets are documented exceptions
+- [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 
 ## By status
 
-### accepted (12)
+### accepted (15)
 
 - [0001](0001-iac-terraform-with-avm.md) — IaC is Terraform, anchored on Azure Verified Modules
 - [0002](0002-observability-otel-first.md) — Observability is OpenTelemetry-first, emission target is configuration
@@ -96,3 +110,6 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0010](0010-tag-taxonomy.md) — Tag taxonomy is small, mandatory, vocabulary-controlled, operational
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
 - [0012](0012-collaborative-design.md) — Collaborative design — practices that prevent design-in-vacuum
+- [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
+- [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
+- [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
