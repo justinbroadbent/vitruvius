@@ -57,7 +57,8 @@ vitruvius/
   scripts/
     generate-adr-index.ps1  # regenerates docs/decisions/README.md from frontmatter (PowerShell, zero external deps)
   .github/
-    workflows/              # fmt, validate, tflint, tfsec, checkov, terraform test
+    workflows/
+      ci.yml                # fmt, init, validate, terraform test, ADR index drift check
     copilot-instructions.md # → AGENTS.md
 ```
 
