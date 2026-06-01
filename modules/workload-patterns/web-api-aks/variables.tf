@@ -123,16 +123,11 @@ variable "key_vault_soft_delete_retention_days" {
 variable "policy_assignment_scope" {
   type        = string
   default     = null
-  description = "Resource ID of the scope (subscription or resource group) where this module's policy initiative is assigned. When null, definitions and the initiative are created at subscription scope, but no assignment is made — useful when assignment is handled by a higher-level config."
-}
-
-variable "policy_definition_subscription_id" {
-  type        = string
-  description = "Subscription ID where the policy definitions and initiative are created. Definitions live at subscription scope; assignment can target the same subscription or a child resource group."
+  description = "Resource ID of the scope where the KV-hardening initiative is assigned — either a subscription (`/subscriptions/{guid}`) or a resource group (`/subscriptions/{guid}/resourceGroups/{name}`). The value is used as the actual assignment scope. When null, the definitions and initiative are still created but no assignment is made — useful when assignment is handled by a higher-level config. Per ADR 0008 the assignment defaults to DoNotEnforce (Audit) at whichever scope is chosen."
 
   validation {
-    condition     = can(regex("^[0-9a-f-]{36}$", var.policy_definition_subscription_id))
-    error_message = "policy_definition_subscription_id must be a valid GUID."
+    condition     = var.policy_assignment_scope == null || can(regex("^/subscriptions/[0-9a-fA-F-]{36}(/resourceGroups/[^/]+)?$", var.policy_assignment_scope))
+    error_message = "policy_assignment_scope must be a subscription ID ('/subscriptions/{guid}') or a resource group ID ('/subscriptions/{guid}/resourceGroups/{name}')."
   }
 }
 

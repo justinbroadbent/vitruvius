@@ -10,15 +10,14 @@ mock_provider "azurerm" {
 }
 
 variables {
-  user_assigned_identity_name       = "id-wsx-memberapi-dev-eus-01"
-  key_vault_name                    = "kv-wsx-memberapi-dev-eus"
-  resource_group_name               = "rg-memberapi-dev"
-  location                          = "eastus"
-  aks_oidc_issuer_url               = "https://eastus.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000/"
-  aks_namespace                     = "memberapi"
-  aks_service_account_name          = "memberapi-sa"
-  log_analytics_workspace_id        = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
-  policy_definition_subscription_id = "00000000-0000-0000-0000-000000000000"
+  user_assigned_identity_name = "id-wsx-memberapi-dev-eus-01"
+  key_vault_name              = "kv-wsx-memberapi-dev-eus"
+  resource_group_name         = "rg-memberapi-dev"
+  location                    = "eastus"
+  aks_oidc_issuer_url         = "https://eastus.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000/"
+  aks_namespace               = "memberapi"
+  aks_service_account_name    = "memberapi-sa"
+  log_analytics_workspace_id  = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
   tags = {
     "owner"                = "member-services"
     "env"                  = "dev"
@@ -114,14 +113,24 @@ run "rejects_tags_missing_required_key" {
   expect_failures = [var.tags]
 }
 
-run "rejects_invalid_subscription_guid" {
+run "rejects_malformed_policy_assignment_scope" {
   command = plan
 
   variables {
-    policy_definition_subscription_id = "not-a-guid"
+    policy_assignment_scope = "not-a-scope"
   }
 
-  expect_failures = [var.policy_definition_subscription_id]
+  expect_failures = [var.policy_assignment_scope]
+}
+
+run "accepts_resource_group_policy_assignment_scope" {
+  command = plan
+
+  variables {
+    policy_assignment_scope = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-pilot"
+  }
+
+  # No expect_failures: a resource-group scope is a valid scope (ADR 0008 pilot path).
 }
 
 run "rejects_invalid_policy_enforcement_mode" {

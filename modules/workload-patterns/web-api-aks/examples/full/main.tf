@@ -57,9 +57,8 @@ module "web_api" {
   key_vault_sku                        = "premium"
   key_vault_soft_delete_retention_days = 30
 
-  policy_definition_subscription_id = "00000000-0000-0000-0000-000000000000"
-  policy_assignment_scope           = "/subscriptions/00000000-0000-0000-0000-000000000000"
-  policy_enforcement_mode           = "DoNotEnforce"
+  policy_assignment_scope = "/subscriptions/00000000-0000-0000-0000-000000000000"
+  policy_enforcement_mode = "DoNotEnforce"
 }
 
 output "workload_identity_client_id" {

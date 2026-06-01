@@ -146,7 +146,7 @@
             },
             "observability": {
               "type": "boolean",
-              "description": "Set true if this module emits, configures, or hosts observability signals (diagnostic settings, OTel collectors, dashboards). Modules with this true must populate spec.ships.monitoring."
+              "description": "Set true if this module emits, configures, or hosts observability signals (diagnostic settings, OTel collectors, dashboards). As a module matures it should ship monitoring artifacts in spec.ships.monitoring; experimental modules may carry an empty monitoring list while alerts and dashboards are still being defined. This is a should, not an enforced invariant — JSON Schema cannot express the conditional and no CI check currently enforces it."
             },
             "secrets": {
               "type": "boolean",

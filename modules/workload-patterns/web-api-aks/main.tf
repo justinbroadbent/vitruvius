@@ -62,8 +62,6 @@ module "key_vault" {
 # --- Policy definitions, initiative, and (optional) assignment ---
 
 locals {
-  policy_subscription_id = "/subscriptions/${var.policy_definition_subscription_id}"
-
   policy_files = {
     "keyvault-purge-protection-required"    = "keyvault-purge-protection-required.json"
     "keyvault-rbac-authorization-required"  = "keyvault-rbac-authorization-required.json"
@@ -83,6 +81,14 @@ locals {
   ]
 
   deploy_assignment = var.policy_assignment_scope != null
+  # The assignment scope is the input value itself, used as the actual scope —
+  # not merely as an on/off flag. A subscription scope is exactly
+  # /subscriptions/{guid}; a deeper path (…/resourceGroups/…) is a resource-group
+  # scope and requires a different assignment resource. Audit-before-Deny (ADR
+  # 0008) often pilots enforcement on a single resource group before promoting to
+  # the whole subscription, so both are first-class.
+  assign_at_subscription   = local.deploy_assignment && can(regex("^/subscriptions/[0-9a-fA-F-]{36}$", var.policy_assignment_scope))
+  assign_at_resource_group = local.deploy_assignment && !local.assign_at_subscription
 }
 
 resource "azurerm_policy_definition" "this" {
@@ -114,10 +120,26 @@ resource "azurerm_policy_set_definition" "this" {
 }
 
 resource "azurerm_subscription_policy_assignment" "this" {
-  count = local.deploy_assignment ? 1 : 0
+  count = local.assign_at_subscription ? 1 : 0
 
   name                 = "vitruvius-web-api-aks-keyvault"
-  subscription_id      = local.policy_subscription_id
+  subscription_id      = var.policy_assignment_scope
+  policy_definition_id = azurerm_policy_set_definition.this.id
+  display_name         = "Vitruvius — web-api-aks Key Vault hardening"
+  description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
+  enforce              = var.policy_enforcement_mode == "Default"
+  location             = var.location
+
+  identity {
+    type = "SystemAssigned"
+  }
+}
+
+resource "azurerm_resource_group_policy_assignment" "this" {
+  count = local.assign_at_resource_group ? 1 : 0
+
+  name                 = "vitruvius-web-api-aks-keyvault"
+  resource_group_id    = var.policy_assignment_scope
   policy_definition_id = azurerm_policy_set_definition.this.id
   display_name         = "Vitruvius — web-api-aks Key Vault hardening"
   description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."

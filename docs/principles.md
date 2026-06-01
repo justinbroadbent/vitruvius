@@ -37,6 +37,13 @@ A module is elegant when reading it teaches you something and editing it doesn't
 
 ## How these are enforced
 
-- CI runs `terraform fmt`, `terraform validate`, `tflint`, `tfsec`, `checkov`, and `terraform test`.
-- A pull request must include a checklist confirming the firmitas/utilitas/venustas review for any new or modified module.
-- An automated first-pass review (CI check, Copilot prompt, or other tooling) surfaces violations against these criteria for human reviewers; humans still own the merge.
+**Today**, CI runs `terraform fmt -check`, `terraform validate`, and `terraform test` per module and example, plus an ADR-index drift check. That is the full set of automated gates currently wired — see the pipeline definition.
+
+**Planned** (not yet wired; do not describe as live in audit-facing material until they are):
+
+- Static analysis: `tflint`, `tfsec`/`checkov` security scanning.
+- Manifest validation: `manifest.yaml` checked against `schemas/module-manifest.schema.json` and cross-checked against `variables.tf`/`outputs.tf` for parity (ADR 0011).
+- A PR checklist confirming the firmitas/utilitas/venustas review for any new or modified module.
+- An automated first-pass review (CI check, Copilot prompt, or other tooling) that surfaces criteria violations for human reviewers; humans still own the merge.
+
+The distinction is deliberate: this repo's whole posture (AP-009) is that docs must not overstate reality. A control described as live when it is not is exactly the audit-finding this section exists to avoid.

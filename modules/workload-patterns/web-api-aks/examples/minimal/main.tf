@@ -52,8 +52,7 @@ module "web_api" {
   aks_namespace            = "memberapi"
   aks_service_account_name = "memberapi-sa"
 
-  log_analytics_workspace_id        = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
-  policy_definition_subscription_id = "00000000-0000-0000-0000-000000000000"
+  log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
 }
 
 output "service_account_annotations" {
