@@ -62,9 +62,28 @@ Per [`docs/golden-paths.md`](../golden-paths.md), deviations from a workload pat
 
 If an engineer raises a concrete technical blocker on a draft pattern, ADR, or policy promotion, the work pauses until the concern is engaged with on its merits. *"That's not the way we're going"* is not an answer; *"here is why your concern does not apply here"* is.
 
+### 9. Every ADR declares what it defers and how reversible it is *(added 2026-06-01)*
+
+Two sections are **required** in every ADR and present in [`_template.md`](_template.md):
+
+- **What this does not decide** — the specifics deliberately left open, named explicitly. Vitruvius is a reference foundation adopted in whole or in part, often before the adopter's real infrastructure is known. Decide the *contract and shape*; defer the *concrete values, topology, and vendor choices* to the adopter or a follow-up. (ADR 0015's "Decisions deferred" section is the original instance; it is now standard and named consistently.)
+- **Reversibility** — classify the decision as cheap-to-change (a two-way door: a config or interface change, low blast radius) or load-bearing (a one-way door: other modules or external contracts depend on it), and state the cost of unwinding it.
+
+The point is to make every decision declare its blast radius, keep the reference-vs-real boundary visible to any adopter, and stop the platform from being locked into corners by decisions that only looked cheap. Both sections are additive, cost nothing, and are enforced by review, not tooling — consistent with the rest of this ADR.
+
 ## What this is not
 
 This ADR does not commit the platform team to consensus-based design. The team's job is still to *commit to opinions* on cross-cutting concerns — see [`docs/golden-paths.md`](../golden-paths.md). The discipline is to gather widely and synthesize opinionatedly. Failing to gather is the seagull anti-pattern; failing to commit is the no-golden-paths anti-pattern. This ADR addresses the first; the golden-paths doc addresses the second.
+
+## What this does not decide
+
+- The concrete RFC period, embedded-rotation cadence, and office-hours frequency — these are per-team agreements; the defaults here are starting points, not mandates.
+- The forum tooling for the public design surface (which chat platform, how issues are organized) — process, not platform.
+- How reviewer sign-off is recorded and enforced mechanically — left to the repo's CI / branch-protection setup (a follow-up decision).
+
+## Reversibility
+
+**Cheap to change (two-way door).** Every practice here is a behavioral commitment, not infrastructure — adjusting a cadence, an RFC period, or a forum is a doc edit and a team conversation, with zero blast radius on any shipped module. Nothing technical depends on these practices. The only real cost of reversing them is cultural: dropping them re-opens the door to the seagull anti-pattern ([AP-012](../anti-patterns.md#ap-012--seagull-architecture)) this ADR exists to close.
 
 ## Consequences
 
