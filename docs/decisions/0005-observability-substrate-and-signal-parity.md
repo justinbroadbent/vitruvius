@@ -41,6 +41,18 @@ The observability story has three coupled rules.
 
 Modules ship the diagnostic settings and alerts that govern their resources (per [ADR 0003](./0003-modules-ship-policy-and-monitoring.md)). The collector and substrate are deployed by `modules/platform-services/observability`.
 
+## What this does not decide
+
+- **The concrete knob values** — the retention windows (30d/1y/7y), cardinality budgets, and per-environment retention (dev 7d / staging 14d / prod tiered) are stated as reference defaults, not fixed law; an adopter tunes them.
+- **The exporter set and substrate topology** — backend choice (inherited from ADR 0002) and the collector's HA/region shape are environment configuration.
+- **The visualization/dashboard tooling** — Azure Monitor workbooks vs Grafana vs other is deferred (see ADR 0013).
+
+## Reversibility
+
+- **The structural rules — centralized substrate, semantic conventions, signal parity — are load-bearing (one-way door).** Once services emit into a single substrate and tooling, dashboards, and CI performance-budgets assume conformant signals and cross-environment parity, unwinding them is an estate-wide change, not a config flip.
+- **The numeric knobs (retention, cardinality budgets) are cheap to change (two-way door)** — they are policy on the collector, tunable per environment with low blast radius.
+- **The backend is two-way** by construction (ADR 0002). Signal parity is the subtle one: cheap to *state*, expensive to *claw back* once lower-env tooling depends on it — so commit to it deliberately.
+
 ## Consequences
 
 **Positive.**

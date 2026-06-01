@@ -57,6 +57,16 @@ Per [ADR 0003](./0003-modules-ship-policy-and-monitoring.md), modules in this re
 
 Adding, modifying, or removing a policy is a PR ([ADR 0007](./0007-change-as-code.md)). A policy change that promotes from `Audit` to `Deny` is a normal change with required security-team review.
 
+## What this does not decide
+
+- **The actual policies and their control mappings** — which initiatives exist and how they map to NIST CSF / GLBA is deferred to the `policies/ncua-glba` work with security/compliance partners, and to each module's own `policy/`.
+- **The exact Audit window per policy** — 30–90 days is a range; the specific dwell time is set per policy from its evidence.
+- **Assignment scope** — where an initiative is assigned (management group / subscription / resource group) is the consumer-boundary's call (§5), governed by the landing-zone decision.
+
+## Reversibility
+
+**Cheap to change (two-way door) — it is a governance process, not infrastructure.** The lifecycle (Audit → Deny, tiered enforcement, first-class exemptions) is a workflow; adjusting a window, flipping an individual policy from `Deny` back to `Audit`, or revising the exemption cadence is a PR with low blast radius and no data loss. The one sticky part is cultural, not technical: teams come to rely on "sandbox stays in Audit," so removing that expectation would be disruptive even though it is mechanically trivial. Nothing here is a one-way door.
+
 ## Consequences
 
 **Positive.**

@@ -59,6 +59,20 @@ Backstage is not in the runtime call path; it is the human-facing inventory. It 
 
 Connection wiring uses **managed identity plus Azure Service Connector**. Endpoint and credential injection happens at deploy time via identity-based connections, not by editing env vars at runtime. This is the necessary complement to the three layers above — without it, hand-rolled env-var plumbing reappears at the wiring layer.
 
+## What this does not decide
+
+- **APIM tier/topology, the mesh upgrade cadence, and the Backstage instance** — concrete sizing and operational specifics are deferred (Backstage's build is gated entirely — see the catalog-contract ADR).
+- **The SaaS-banking facade contract** — the upstream vendor's API surface isn't collected yet; the facade *pattern* is decided, the specifics are blocked (`examples/saas-core-integration`).
+- **The three tools as products** — that runtime resolution is the mesh, cross-boundary is APIM, and inventory is Backstage is the decision; swapping any one implementation is left open per the reversibility note.
+
+## Reversibility
+
+The three concerns also have three different reversibility profiles — which is itself a reason to keep them separate:
+
+- **Inventory (Backstage): cheap to change (two-way door).** It is out of the runtime path and "can be temporarily wrong without causing outages." Swapping or even removing it has no runtime blast radius.
+- **Runtime resolution (managed Istio): moderately reversible.** It is the AKS add-on; changing service mesh is a per-cluster migration, not estate-wide by design.
+- **Cross-boundary contract (APIM): load-bearing (one-way door).** Once consumers (including cross-cloud callers) depend on stable APIM URLs and the tier-0 facade is the chokepoint, moving off it is a coordinated migration across every published contract. This is the layer to commit to most carefully.
+
 ## Consequences
 
 **Positive.**

@@ -66,7 +66,7 @@ Some platform components (the substrate itself, the policy-evaluation pipeline, 
 
 This is the symmetric case: anyone running a service declares SLOs for it. The platform team runs services too.
 
-## Decisions deferred
+## What this does not decide
 
 - **Manifest-schema shape.** What `slo:` looks like inside `manifest.yaml`. The structure has to support multiple SLI dimensions, target values, measurement windows, and possibly burn-rate alerting thresholds. Deferred until at least one workload team has a real SLO to declare; the schema follows reality, not the other way around.
 - **Default target percentiles per business-criticality tier.** Tier-0 should clearly have stricter SLOs than tier-3, but the specific numbers (99.95% vs 99.9% vs 99.5%) are workload-team decisions in collaboration with stakeholders.
@@ -82,6 +82,10 @@ This is the symmetric case: anyone running a service declares SLOs for it. The p
 - Tooling decision is its own ADR with a procurement / build-vs-buy comparison.
 - Per-workload targets and policies are documented in each workload's onboarding RFC, not in platform ADRs.
 - Default templates (if any) ship as a docs PR (`docs/slo-templates.md`) once a few real workloads have shaken out the patterns.
+
+## Reversibility
+
+**Cheap to change (two-way door) — and deliberately so, because the platform owns only the framework.** The SLI definitions, dashboard plumbing, and error-budget *mechanism* are platform-provided scaffolding that can be revised; the numeric targets and budget policies live with workload teams, who can renegotiate them as a documented change. Nothing here is data-destructive or contract-breaking. The split itself (platform owns the framework, workload owns the numbers) is the one sticky commitment — reversing *that* would mean the platform team setting targets for services it does not operate, which the ADR rejects on principle, not for cost reasons.
 
 ## Consequences
 
