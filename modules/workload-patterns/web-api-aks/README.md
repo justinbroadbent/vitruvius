@@ -48,8 +48,7 @@ module "memberapi" {
   aks_namespace            = "memberapi"
   aks_service_account_name = "memberapi-sa"
 
-  log_analytics_workspace_id        = data.azurerm_log_analytics_workspace.substrate.id
-  policy_definition_subscription_id = data.azurerm_subscription.current.subscription_id
+  log_analytics_workspace_id = data.azurerm_log_analytics_workspace.substrate.id
 }
 ```
 
@@ -70,8 +69,7 @@ The workload-pattern never imports the foundation modules. Names and tags are pa
 | `log_analytics_workspace_id` | string | yes | Resource ID of the platform LAW per ADR 0005. |
 | `key_vault_sku` | string | no | `standard` (default) or `premium`. |
 | `key_vault_soft_delete_retention_days` | number | no | 7–90 (default 90). Auditors expect the maximum. |
-| `policy_definition_subscription_id` | string | yes | Subscription ID where definitions and the initiative live. |
-| `policy_assignment_scope` | string | no | When supplied, the initiative is assigned at this subscription scope. When null, no assignment is created — useful when a higher scope handles assignment. |
+| `policy_assignment_scope` | string | no | Scope at which the initiative is assigned — a subscription (`/subscriptions/{guid}`) or resource group (`/subscriptions/{guid}/resourceGroups/{name}`) ID; the value is the actual scope. When null, no assignment is created — useful when a higher scope handles assignment. |
 | `policy_enforcement_mode` | string | no | `DoNotEnforce` (default; Audit-before-Deny per ADR 0008) or `Default`. |
 
 ## Outputs

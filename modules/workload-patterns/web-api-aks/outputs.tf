@@ -37,6 +37,10 @@ output "policy_initiative_id" {
 }
 
 output "policy_assignment_id" {
-  value       = local.deploy_assignment ? azurerm_subscription_policy_assignment.this[0].id : null
-  description = "Resource ID of the policy assignment. Null when policy_assignment_scope was not supplied (assignment is then expected to happen at a higher scope)."
+  value = (
+    local.assign_at_subscription ? azurerm_subscription_policy_assignment.this[0].id :
+    local.assign_at_resource_group ? azurerm_resource_group_policy_assignment.this[0].id :
+    null
+  )
+  description = "Resource ID of the policy assignment (subscription- or resource-group-scoped, matching policy_assignment_scope). Null when policy_assignment_scope was not supplied (assignment is then expected to happen at a higher scope)."
 }

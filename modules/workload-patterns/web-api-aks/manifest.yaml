@@ -62,11 +62,7 @@ spec:
     - name: policy_assignment_scope
       type: string
       required: false
-      description: When supplied, the KV-hardening initiative is assigned at this subscription scope.
-    - name: policy_definition_subscription_id
-      type: string
-      required: true
-      description: Subscription where policy definitions and the initiative are created.
+      description: Scope at which the KV-hardening initiative is assigned — a subscription or resource group ID. The value is used as the actual assignment scope. When null, the initiative is created but not assigned.
     - name: policy_enforcement_mode
       type: string
       required: false

@@ -52,11 +52,10 @@ variables {
     "data-classification"  = "internal"
     "business-criticality" = "tier-2"
   }
-  aks_oidc_issuer_url               = "https://eastus.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000/"
-  aks_namespace                     = "memberapi"
-  aks_service_account_name          = "memberapi-sa"
-  log_analytics_workspace_id        = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
-  policy_definition_subscription_id = "00000000-0000-0000-0000-000000000000"
+  aks_oidc_issuer_url        = "https://eastus.oic.prod-aks.azure.com/00000000-0000-0000-0000-000000000000/00000000-0000-0000-0000-000000000000/"
+  aks_namespace              = "memberapi"
+  aks_service_account_name   = "memberapi-sa"
+  log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform-prod/providers/Microsoft.OperationalInsights/workspaces/log-platform-prod"
 }
 
 run "federated_credential_subject_is_correctly_built" {
@@ -110,11 +109,11 @@ run "policy_assignment_skipped_when_scope_null" {
   }
 }
 
-run "policy_assignment_created_when_scope_supplied" {
+run "subscription_scope_assigns_at_that_subscription" {
   command = apply
 
   variables {
-    policy_assignment_scope = "/subscriptions/00000000-0000-0000-0000-000000000000"
+    policy_assignment_scope = "/subscriptions/11111111-1111-1111-1111-111111111111"
   }
 
   assert {
@@ -122,9 +121,45 @@ run "policy_assignment_created_when_scope_supplied" {
     error_message = "policy_assignment_id must be non-null when policy_assignment_scope is supplied"
   }
 
+  # The supplied scope must BE the assignment scope — not a value derived from a
+  # different input. (Regression guard for the prior bug where the scope input
+  # was only a boolean toggle and the real scope came from elsewhere.)
+  assert {
+    condition     = azurerm_subscription_policy_assignment.this[0].subscription_id == "/subscriptions/11111111-1111-1111-1111-111111111111"
+    error_message = "subscription-scoped assignment must target the exact subscription passed in policy_assignment_scope"
+  }
+
+  assert {
+    condition     = length(azurerm_resource_group_policy_assignment.this) == 0
+    error_message = "a subscription scope must not also create a resource-group assignment"
+  }
+
   assert {
     condition     = azurerm_subscription_policy_assignment.this[0].enforce == false
     error_message = "default policy_enforcement_mode must produce enforce=false (DoNotEnforce/Audit-before-Deny per ADR 0008)"
+  }
+}
+
+run "resource_group_scope_assigns_at_that_resource_group" {
+  command = apply
+
+  variables {
+    policy_assignment_scope = "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-pilot"
+  }
+
+  assert {
+    condition     = output.policy_assignment_id != null
+    error_message = "policy_assignment_id must be non-null for a resource-group scope (ADR 0008 pilot-on-one-RG path)"
+  }
+
+  assert {
+    condition     = azurerm_resource_group_policy_assignment.this[0].resource_group_id == "/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/rg-pilot"
+    error_message = "resource-group-scoped assignment must target the exact resource group passed in policy_assignment_scope"
+  }
+
+  assert {
+    condition     = length(azurerm_subscription_policy_assignment.this) == 0
+    error_message = "a resource-group scope must not also create a subscription assignment"
   }
 }
 
