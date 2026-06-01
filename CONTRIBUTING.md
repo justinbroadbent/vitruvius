@@ -28,11 +28,12 @@ If you're not sure which shape your contribution fits, open a draft PR and ask.
 
 ADRs follow an RFC pattern (per [ADR 0012](docs/decisions/0012-collaborative-design.md)):
 
-1. Copy the most recent ADR as a template; assign the next sequential ID.
+1. Copy [`docs/decisions/_template.md`](docs/decisions/_template.md); assign the next sequential ID.
 2. Write the **Context** section first. If the context isn't strong enough to justify a decision, the ADR isn't ready.
-3. Open a draft PR with the `kind:rfc-adr` label.
-4. The ADR is open for comment for the RFC period — default two weeks; longer for cross-cutting decisions.
-5. After the RFC period, sign-off from reviewers in affected teams converts the draft to ready-for-merge.
+3. Fill **every** section. Two are required and non-negotiable (ADR 0012 §9): **What this does not decide** — the deferred specifics, named explicitly — and **Reversibility** — cheap-to-change vs load-bearing, and the cost of unwinding. They keep the reference-vs-real boundary explicit and stop the platform from being locked into corners.
+4. Open a draft PR with the `kind:rfc-adr` label.
+5. The ADR is open for comment for the RFC period — default two weeks; longer for cross-cutting decisions.
+6. After the RFC period, sign-off from reviewers in affected teams converts the draft to ready-for-merge.
 
 The architect can author an ADR; the architect cannot self-approve it.
 
