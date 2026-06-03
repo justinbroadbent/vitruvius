@@ -14,7 +14,7 @@ cites_adrs: [ADR-0005, ADR-0007]
 
 ## Context
 
-A platform that is not measured cannot be improved, defended in budget conversations, or trusted by the teams it serves. "We feel like things are working" is the failure mode in [AP-007 — ITIL ceremony](../anti-patterns.md#ap-007--itil-ceremony) inverted: heavyweight process exists *and* nobody can answer "how is the platform actually performing?"
+A platform that is not measured cannot be improved, defended in budget conversations, or trusted by the teams it serves. "We feel like things are working" is the failure mode in [AP-007 — Change-management theater](../anti-patterns.md#ap-007--change-management-theater) inverted: heavyweight process exists *and* nobody can answer "how is the platform actually performing?"
 
 DORA's four metrics (Forsgren / Humble / Kim, *Accelerate*) are the industry-consensus starting point for measuring software-delivery performance. They are not the only metrics that matter, but they are the ones a platform team is expected to be able to produce on demand.
 
@@ -48,7 +48,7 @@ This is deliberate. Targets declared without the consuming teams' input are eith
 
 Platform metrics are surfaced in a dashboard the consuming teams can see — same data, no shadow scorecards. The dashboard's home is the substrate's visualization layer (Azure Monitor workbook, Grafana, or whatever we land on per the deferred decisions below).
 
-## Decisions deferred
+## What this does not decide
 
 These are explicitly **not** decided here. They are captured so they don't get lost; the process for resolving them is in §"How deferred decisions get made" below.
 
@@ -64,6 +64,10 @@ These are explicitly **not** decided here. They are captured so they don't get l
 - Measurement-infrastructure choice is a follow-up ADR with a real procurement / build-vs-buy comparison; not gated on this ADR.
 - Cadence of review and ownership get decided in the platform-team operating-model document, not in an ADR.
 - This ADR is amended (`supersedes` / `superseded_by` chain) if the *discipline* itself changes — e.g., DORA gets supplemented with SPACE, or the supplementary metrics list grows.
+
+## Reversibility
+
+**Cheap to change (two-way door).** The decision is "we measure, and DORA is the starting frame" — a measurement discipline, not infrastructure. Adding a metric family (SPACE, cost, security posture), swapping the dashboard tooling, or changing review cadence are additive, low-blast-radius changes; the ADR already calls DORA the *starting* frame, not the whole frame. The only thing approaching a one-way commitment is cultural: once teams trust a shared scorecard, changing definitions mid-stream erodes that trust, so metric *definitions* should change deliberately even though they are mechanically easy to revise.
 
 ## Consequences
 
@@ -82,7 +86,7 @@ These are explicitly **not** decided here. They are captured so they don't get l
 
 ## Cites
 
-- [AP-007](../anti-patterns.md#ap-007--itil-ceremony) — heavyweight process without measurement is the failure mode this ADR partially addresses.
+- [AP-007](../anti-patterns.md#ap-007--change-management-theater) — heavyweight process without measurement is the failure mode this ADR partially addresses.
 - [ADR 0005](./0005-observability-substrate-and-signal-parity.md) — the substrate is where these metrics' data lives.
 - [ADR 0007](./0007-change-as-code.md) — the deployment ledger feeds deployment-frequency and lead-time signals.
 - Forsgren, Humble, Kim — *Accelerate: The Science of Lean Software and DevOps* — the source of the four metrics.

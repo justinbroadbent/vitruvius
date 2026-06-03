@@ -26,6 +26,19 @@ Modules deploy or assume the presence of an **OpenTelemetry Collector** that fan
 
 Service code (in workload-pattern examples) instruments via the **OpenTelemetry SDK** for its language, configured to point at the collector via OTLP. Code never imports Application Insights or Datadog SDKs directly.
 
+## What this does not decide
+
+- **The backend / exporter set** — Azure Monitor vs Datadog vs any OTLP-compatible alternative is a per-environment input, not decided here. That deferral is the whole point of the ADR.
+- **The collector deployment topology** — single-collector vs HA fan-out is an environment and platform-services concern (ADR 0005).
+- **Which language SDKs** — each workload instruments in its own language; the platform fixes the *format*, not the runtime.
+
+## Reversibility
+
+The two halves sit deliberately on opposite sides of the door:
+
+- **OpenTelemetry as the collection format: load-bearing (one-way door).** Every instrumented service emits OTel; abandoning it means re-instrumenting the estate. This is the commitment the ADR is making.
+- **The emission target: cheap to change (two-way door).** Backend choice is configuration on the collector — switching, or dual-exporting during a migration, requires no service-code change. The collector indirection is exactly the optionality that keeps backend choice reversible.
+
 ## Consequences
 
 **Positive:**

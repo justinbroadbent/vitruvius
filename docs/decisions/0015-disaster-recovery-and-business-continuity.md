@@ -58,7 +58,7 @@ The platform itself is a service. The substrate (LAW), the policy-evaluation inf
 
 Azure paired regions have specific update-domain and recovery semantics. The platform's choice of primary and DR regions is a per-environment decision (likely consistent across environments, but possibly not — a sandbox environment may not warrant DR pairing at all). The decision is captured per environment in the environment's root config, with the rationale.
 
-## Decisions deferred
+## What this does not decide
 
 - **Manifest-schema shape.** The `rto:` and `rpo:` fields in `manifest.yaml`. Likely per-environment objects (e.g., `rto: { prod: 4h, staging: 24h, dev: best_effort }`), but exact shape deferred until at least one workload has a real declaration.
 - **Default RTO/RPO suggestions per business-criticality tier.** Reasonable starting points exist (tier-0 = minutes, tier-3 = days), but the platform team should not declare these without input from risk, the relevant business stakeholder, and the impacted workload teams. Suggested *defaults* may eventually live in `docs/dr-templates.md`; *targets* always come from the conversation with the team.
@@ -75,6 +75,10 @@ Azure paired regions have specific update-domain and recovery semantics. The pla
 - Backup-tooling decision is a follow-up ADR with a procurement / build-vs-buy comparison per primitive.
 - Drill cadence and BCP integration are documented in `docs/dr-runbook.md` (future) and reviewed with risk leadership at least annually.
 - Compliance-evidence shape is its own follow-up, likely after the first audit cycle gives concrete feedback.
+
+## Reversibility
+
+**Mostly cheap to change (two-way door); two parts are load-bearing.** The discipline — workloads own RTO/RPO, the platform provides primitives, drills are real — is a posture that can be adjusted per workload through ordinary change. The two stickier parts: (1) **region-pair selection**, once data lands in a primary/DR pair, is expensive to re-home (a data-migration project, not a config flip), which is why the ADR pushes it into per-environment root config where it is decided with eyes open; and (2) the **platform's own DR commitments** for the substrate and deploy identity, which downstream workloads implicitly depend on. Everything else — targets, tooling, cadences — is explicitly deferred and revisable.
 
 ## Consequences
 

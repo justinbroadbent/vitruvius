@@ -44,6 +44,16 @@ When a third party requires a long-lived credential — and only then — the fo
 
 If a human ever rotates a secret manually outside the codified path, that is a platform failure to be addressed, not a normal operating mode. The rotation toil this ADR is designed to eliminate must not creep back in via manual exceptions.
 
+## What this does not decide
+
+- **Which specific static-secret exceptions exist** — each one is its own documented ADR with the vendor's rotation contract; none is pre-blessed here.
+- **The rotation-handler and CSI/cert-manager implementations** — the requirement is "rotation is checked-in code," not a specific handler design.
+- **The central secrets platform module** — a shared Key Vault + rotation tooling module is deferred (see the CMK / key-management work).
+
+## Reversibility
+
+**A sticky default, but not a one-way door.** "Ephemeral by default" is wired into the workload patterns, so the path of least resistance is identity-based auth; reversing it to a static-secret default would re-introduce [AP-006](../anti-patterns.md#ap-006--secret-rotation-toil) but destroys no data and breaks no contract — it is a default and a discipline. Per-exception decisions are explicitly **two-way**: when a vendor adds identity-based auth, the annual review closes the exception. What makes the default expensive to abandon is cultural momentum, not technical lock-in.
+
 ## Consequences
 
 **Positive.**

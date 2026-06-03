@@ -26,6 +26,16 @@ A consumer instantiates Module A, reads its outputs, and passes them as inputs t
 
 We do **not** create orchestrator modules whose only purpose is to call other modules in this repo.
 
+## What this does not decide
+
+- **How a consumer structures its root** — single root vs per-environment vs per-workload is the consumer's call; the reference environment root is a separate piece of work.
+- **The exact module/consumer boundary for edge cases** — where "this is a module" ends and "this is a consumer" begins is judged per case (`docs/composition.md`), not fixed here.
+- **Upstream AVM nesting** — depending on `Azure/...` AVM modules is explicitly *not* a violation (see "When the rule does not apply").
+
+## Reversibility
+
+**Load-bearing (one-way door) — and asymmetric.** Reversing this is *mechanically* trivial (nothing stops someone adding an orchestrator module tomorrow; it is an additive change that breaks no existing module). But it is *strategically* a one-way door: once orchestrators exist they attract more orchestrators, and the component-sprawl failure mode this ADR prevents compounds and is expensive to unwind. So the cost is not in the first reversal but in recovering from where it leads — which is exactly why the rule is guarded at review rather than by tooling. What would have to change to undo it: no existing code, but every future module's design assumption and the review discipline that enforces output-only contracts.
+
 ## Consequences
 
 **Positive:**

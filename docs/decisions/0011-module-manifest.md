@@ -86,7 +86,7 @@ Every PR that touches a module runs:
    - Declared `spec.tests` files exist in `tests/`.
    - Cited ADR IDs and AP IDs exist.
 3. **Semantic-rule checks**:
-   - If `spec.cross_cutting.observability=true` and `spec.ships.monitoring` is empty, fail.
+   - If `spec.cross_cutting.observability=true` and `spec.ships.monitoring` is empty, warn — a maturing module should ship monitoring, but an experimental module may not have alerts/dashboards defined yet (the schema treats this as a *should*, not an enforced invariant).
    - If `metadata.status=stable` but no consumer exists in `examples/` of another module, warn.
    - Module-area-specific rules can be added.
 
@@ -107,6 +107,16 @@ The repo deliberately consolidates this metadata into one file rather than sprea
 - **HCL** would tempt module authors to compute manifest fields dynamically; the manifest must be static, declarative, and trivially parseable by any tool.
 - **JSON** is harder to write by hand, lacks comments, and discourages the structured prose (descriptions) that auditors and humans read.
 - **YAML** matches the convention of adjacent ecosystems (Backstage, Kubernetes, Helm) and is what most readers will already know.
+
+## What this does not decide
+
+- **The schema's future evolution** — `apiVersion: vitruvius.io/v1` is pinned; any breaking change is its own ADR with a migration plan.
+- **When the CI coherence-checks and the `catalog-info.yaml` converter are actually wired** — this ADR specifies the validation and the Backstage bridge; *implementing* them in the pipeline is a follow-up (the manifest-validation CI step and the catalog generation are separate work items, not yet live).
+- **The Backstage instance itself** — its deployment is gated behind the catalog-contract decision.
+
+## Reversibility
+
+**Load-bearing by design — cheap today, expensive later.** The manifest is meant to become the single contract that CI, the Backstage catalog, AI agents, and auditors all read. Today little consumes it, so changing its shape is still relatively cheap; every consumer that attaches (a CI validator, a catalog converter, an agent that expects fields) raises the cost of changing it. That asymmetry is the argument for getting the shape right *now*, while it is reversible — which is what this ADR does. The `apiVersion` pin keeps even future breaking changes a managed, migrate-forward path rather than a hard wall.
 
 ## Consequences
 

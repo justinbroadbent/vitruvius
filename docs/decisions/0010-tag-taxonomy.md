@@ -64,6 +64,21 @@ A small, mandatory, vocabulary-controlled tag set governs every taggable resourc
 
 Tag taxonomy changes go through ADR. Adding a new required tag is a breaking change managed deliberately — existing resources need a back-fill plan before the new requirement promotes from `Audit` to `Deny`. Adding a new value to an existing vocabulary is a normal change.
 
+## What this does not decide
+
+- **The concrete data** — actual `cost-center` codes, team aliases in `owner`, and `app` names are org data supplied by the adopter, not platform decisions.
+- **Whether more keys graduate to required later** — that is governed through ADR (with an estate-wide back-fill), not pre-decided.
+- **The mechanics of the operational hooks** — the TTL job, alert routing, and cost-allocation reports referenced above depend on the substrate and the Backstage catalog; their implementations are follow-ups, not settled here.
+
+## Reversibility
+
+The two halves of this decision sit on opposite sides of the door, and the split *is* the design:
+
+- **The set of required keys: load-bearing (one-way door).** Once resources are tagged and policies, cost reports, and lifecycle automation target those keys, renaming or removing a key breaks policy targeting, cost allocation, and cleanup jobs across the whole estate and forces an estate-wide back-fill. The ADR already names "add a required tag" as a breaking change; *remove or rename* one is worse. Commit to the keys carefully.
+- **The vocabulary of allowed values: cheap to change (two-way door).** Adding an allowed value is "a PR to the `foundation/tags` module," shipped through Audit-before-Deny (ADR 0008) — additive, low blast radius. Iterate freely here.
+
+That asymmetry is the contract-vs-specifics line: the **keys** are the contract, the **values** are tunable.
+
 ## Consequences
 
 **Positive.**

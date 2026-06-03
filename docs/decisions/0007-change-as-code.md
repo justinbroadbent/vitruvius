@@ -54,6 +54,18 @@ PIM elevation that performs a manual change generates a Terraform back-fill PR w
 
 A scheduled `terraform plan` against production opens a ticket if non-zero. Drift cannot accumulate silently. The drift ticket triages to one of: (a) a bug in the code, (b) a missed back-fill from break-glass, (c) an external party changing things — each handled differently.
 
+## What this does not decide
+
+- **The CI/CD platform** — GitHub vs Azure DevOps. The control set is described in GitHub vocabulary but is explicitly tool-agnostic; see §"Tool-platform portability" below for the equivalence table. The platform choice is configuration.
+- **The standard-change pattern definitions** — which changes auto-merge is a code-defined set that starts conservative and expands on incident-free history, not a list fixed here.
+- **The deployment-ledger and auto-PR-back implementations** — the *requirement* (a generated, audit-grade ledger; break-glass captured within 24h) is decided; the mechanism is a follow-up (the CI/CD architecture work).
+- **The commit-signing mechanism** — gpg vs sigstore-equivalent; identity proof is required, the specific tool is not.
+
+## Reversibility
+
+- **The CI/CD platform is cheap to change (two-way door)** — and the ADR is built that way: §"Tool-platform portability" maps every control to its GitHub and Azure DevOps equivalent. Porting is configuration, not architecture.
+- **The change-as-code *discipline* is load-bearing (one-way door)** in the sense that matters here: it *is* the audit-control posture. Reversing it (back to CAB-style ceremony, or to untracked manual change) doesn't destroy data, but it dismantles the evidence story examiners rely on and the signals that depend on it (the deployment ledger feeds DORA metrics in ADR 0013; drift detection depends on plan-as-truth). The commitment is to the *controls*; the tools underneath them are swappable.
+
 ## Consequences
 
 **Positive.**
