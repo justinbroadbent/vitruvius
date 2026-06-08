@@ -14,17 +14,17 @@ cites_adrs: [ADR-0006, ADR-0011]
 
 ## Context
 
-Backstage is already load-bearing in this repo's design, but every reference to it currently dangles:
+Backstage is referenced across the design without a concrete catalog behind it:
 
-- `manifest.yaml`'s `metadata.owner` is documented as "a Backstage catalog component."
+- `manifest.yaml`'s `metadata.owner` is "a Backstage catalog component."
 - `foundation/naming`'s `workload` input is "a Backstage catalog component."
 - [ADR 0006](./0006-service-discovery-three-layers.md) names Backstage as the inventory-and-ownership layer.
-- [AGENTS.md] hard rule 8 says TechDocs *pulls* from the repo rather than forking.
-- The `ai-chat-corpus` concept concluded that **Backstage Search is the prerequisite question** — i.e., Backstage is upstream of that concept.
+- AGENTS.md hard rule 8 says TechDocs *pulls* from the repo rather than forking.
+- The `ai-chat-corpus` concept treats Backstage Search as its prerequisite.
 
-None of it points at anything real. Meanwhile the manifests were deliberately built ([ADR 0011](./0011-module-manifest.md)) as machine-readable contracts, with a stated intent to generate `catalog-info.yaml` from them.
+The manifests ([ADR 0011](./0011-module-manifest.md)) are machine-readable contracts intended to generate `catalog-info.yaml`.
 
-The decision in front of us is **not** "stand up Backstage." That is portal-before-platform: hosting a Node service, a database, auth, plugins, and a TechDocs pipeline before there is a substrate, networking, or a landing zone to catalog. The decision is to fix the **catalog contract** — the entity model and the `manifest.yaml → catalog-info.yaml` mapping — so the foundation is catalog-*ready* and the dangling references become real, while the server stays deferred.
+Standing up Backstage — a Node service, a database, auth, plugins, a TechDocs pipeline — before there is a substrate, networking, or a landing zone to catalog is portal-before-platform. This ADR fixes the **catalog contract** — the entity model and the `manifest.yaml → catalog-info.yaml` mapping — so the foundation is catalog-ready; the server stays deferred.
 
 ## Decision
 
@@ -42,11 +42,11 @@ The estate maps onto Backstage's well-known kinds as follows:
 | Each area (`foundation`, `networking`, `platform-services`, `workload-patterns`) | **System** | From `metadata.area`. |
 | Each **module** | **Component**, `spec.type: terraform-module` | The reusable library/pattern artifact. |
 | The owning team (`metadata.owner`) | **Group** (referenced) | `spec.owner: group:<owner>`. |
-| Published service APIs | **API** | *Deferred* — these come from APIM (ADR 0006), which does not exist yet. |
+| Published service APIs | **API** | *Deferred* — derived from APIM (ADR 0006). |
 | Provisioned Azure resources | **Resource** | *Deferred* — instance-level and infra-dependent. |
 | People | **User** | *Deferred* — real org data, adopter-supplied. |
 
-A Vitruvius module is modeled as the **library/pattern**, not a running instance. When an adopter *deploys* a workload using `web-api-aks`, that deployed instance becomes a `Component` of type `service` in **the adopter's** catalog — downstream of this repo and explicitly out of scope here. This split is exactly the reference-foundation-adopted-in-whole-or-in-part posture: we catalog the library; adopters catalog their instances.
+A Vitruvius module is modeled as the **library/pattern**, not a running instance. When an adopter *deploys* a workload using `web-api-aks`, that deployed instance becomes a `Component` of type `service` in **the adopter's** catalog — downstream of this repo and out of scope here. Vitruvius catalogs the library; adopters catalog their instances.
 
 ### 3. The `manifest.yaml → catalog-info.yaml` mapping (kind: Component)
 
@@ -83,7 +83,7 @@ The `System` entities (one per area) and the single `Domain` entity are **not** 
 
 ### 4. Generation is a pure repo artifact
 
-A converter (Go, per the team's language preference; lives in `scripts/`, as ADR 0011 already promised) reads every `manifest.yaml` and emits the corresponding `catalog-info.yaml`. It is deterministic and runs in CI; a drift check fails the build if a committed `catalog-info.yaml` does not match what the manifests produce. Building the converter is its own work item, separate from this contract decision.
+A converter in `scripts/` (Go, per the team's language preference) reads every `manifest.yaml` and emits the corresponding `catalog-info.yaml`. It is deterministic and runs in CI; a drift check fails the build when a committed `catalog-info.yaml` does not match what the manifests produce.
 
 ### 5. The Backstage **deployment** is deferred behind explicit triggers
 
@@ -113,7 +113,7 @@ Until then, the contract above makes the foundation catalog-ready at zero operat
 
 **Positive.**
 
-- The dangling Backstage references (`owner`, `workload`, ADR 0006, AGENTS rule 8) become real and checkable.
+- The Backstage references across the design (`owner`, `workload`, ADR 0006, AGENTS rule 8) resolve to a concrete, checkable catalog.
 - The foundation is catalog-ready at zero operating cost; an adopter can point their existing Backstage at this repo and get a populated catalog immediately.
 - The catalog cannot rot (AP-009): it is derived from the manifests in CI, not forked.
 - The repo's own structure (domain → area → module) is reflected one-to-one in the catalog hierarchy.
@@ -129,4 +129,4 @@ Until then, the contract above makes the foundation catalog-ready at zero operat
 - [AP-009](../anti-patterns.md#ap-009--doc-rot) — the catalog is derived, never forked, so it cannot rot.
 - [ADR 0006](./0006-service-discovery-three-layers.md) — Backstage is the inventory-and-ownership layer; this ADR makes its catalog concrete.
 - [ADR 0011](./0011-module-manifest.md) — the manifest is the source this catalog is derived from.
-- `concepts/ai-chat-corpus/` — established that Backstage Search is the prerequisite question; this ADR is the upstream answer.
+- `concepts/ai-chat-corpus/` — treats Backstage Search as its prerequisite.

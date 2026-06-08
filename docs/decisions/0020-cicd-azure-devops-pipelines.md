@@ -1,99 +1,86 @@
 ---
 id: 20
-title: CI/CD is Azure DevOps Pipelines — OIDC-federated, plan-gated, with a generated deployment ledger
+title: CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger
 status: accepted
 date: 2026-06-08
 categories: [process, infrastructure, governance]
 supersedes: []
 superseded_by: []
-cites_anti_patterns: [AP-007, AP-009, AP-004]
+cites_anti_patterns: [AP-007, AP-004, AP-006]
 cites_adrs: [ADR-0007, ADR-0009, ADR-0013, ADR-0017, ADR-0024]
 ---
 
-# ADR 0020 — CI/CD is Azure DevOps Pipelines — OIDC-federated, plan-gated, with a generated deployment ledger
+# ADR 0020 — CI/CD architecture: OIDC-federated, plan-gated, with a generated deployment ledger
 
 ## Context
 
-[ADR 0007](./0007-change-as-code.md) decided the *philosophy* — change is code; the PR is the change record; CD is the executor; a deployment ledger is the audit artifact; drift is detected in CI. It was deliberately tool-agnostic (its portability table maps every control to both GitHub and Azure DevOps) and it deferred three things by name to "the CI/CD architecture work": **the platform choice**, **the deployment-ledger implementation**, and **the break-glass auto-PR-back**. This ADR is that work for the mechanism that runs plans and applies.
+[ADR 0007](./0007-change-as-code.md) sets the change-as-code controls — the PR is the change record, CD is the executor, a deployment ledger is the audit artifact, drift is detected in CI — and keeps them platform-agnostic. This ADR specifies the pipeline architecture that carries those controls: how the deploy identity authenticates, where plan and apply run, what the ledger contains, and how drift is caught.
 
-The forces:
-
-- **The confirmed toolchain is split.** Source control is **GitHub**; CI/CD is **Azure DevOps**. The repo, however, ships only `.github/workflows/ci.yml`, and `docs/ai-usage.md` says "GitHub Actions invoke an LLM at PR time." The artifact misrepresents the toolchain — itself an [AP-009](../anti-patterns.md#ap-009--doc-rot) finding. Naming reality is part of this decision.
-- **Several accepted ADRs now bind to "the pipeline."** ADR 0017 §6 hands drift detection to it and requires it to reach network-restricted state via identity; ADR 0009 forbids static secrets in it; ADR 0013 (DORA) consumes its deployment ledger; ADR 0024 says promotion stages map to environment-subscriptions. The pipeline is now a load-bearing seam with no decision behind it.
-
-This ADR decides the **architecture and contracts** — platform, identity, gates, ledger, drift — and defers the concrete `azure-pipelines.yml` and the GitHub Actions cleanup to the implementation work (roadmap #5).
+The architecture is platform-agnostic. The reference implementation is Azure DevOps Pipelines triggered from a GitHub source repository; an adopter on a different platform maps the same controls through ADR 0007's portability table.
 
 ## Decision
 
-### 1. Azure DevOps Pipelines is the CI/CD system of record; GitHub is source
+### 1. Plan is a pull-request check; apply is gated, approved, and promoted per environment
 
-Plan, apply, promotion, the deployment ledger, and drift detection run on **Azure Pipelines (YAML)**, triggered from the GitHub repo via a GitHub service connection. Azure DevOps is the system of record for everything that touches Azure. This is the platform choice ADR 0007 deferred; per ADR 0007's portability table, it remains a configuration choice, not an architectural one.
+- `plan` runs as a PR check. No apply runs on a PR.
+- `apply` runs post-merge, per environment, behind an approval gate. Production apply requires an approver who is not the author.
+- Promotion is dev → staging → prod, each an environment-subscription ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)). The same artifact promotes across environments; environments differ by input, not by rebuild.
+- Standard / normal / emergency changes ([ADR 0007](./0007-change-as-code.md) §4) map to conditional stages and PR tags.
 
-**The reference repo is the exception, and says so.** This repository is a documentation/reference artifact with no Azure estate to deploy to; its `.github/workflows/ci.yml` is **repo-hygiene only** (fmt / validate / `terraform test` / ADR-index drift / manifest validation). It is explicitly *not* the estate's CD path, and the docs that imply otherwise are corrected in the implementation work (#5). An adopter's estate uses Azure Pipelines for CD; the GitHub-side checks, if kept, are fast PR hygiene.
+### 2. The deploy identity is OIDC workload-identity federation
 
-### 2. The deploy identity is OIDC workload-identity federation — no static secrets
+The pipeline authenticates to Azure through a workload-identity-federation (OIDC) connection — no PATs, no service-principal secrets, no storage-account keys ([ADR 0009](./0009-secrets-ephemeral-by-default.md)). The same federated identity holds least-privilege access to the Terraform state backend ([ADR 0017](./0017-terraform-state-and-backend.md)) and scoped write access to the target environment-subscription ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)).
 
-The pipeline authenticates to Azure through an Azure DevOps **workload-identity-federation service connection** (OIDC) — no PATs, no service-principal secrets, no storage account keys ([ADR 0009](./0009-secrets-ephemeral-by-default.md)). That same federated identity is the one granted least-privilege, per-container data-plane access to the Terraform state backend ([ADR 0017](./0017-terraform-state-and-backend.md) §2) and scoped write access to the target environment-subscription ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)). One identity, federated, least-privilege, audited.
+### 3. The deployment ledger is generated by the apply stage
 
-### 3. Plan is a PR check; apply is gated, approved, and promoted per environment
+Each deployment emits an append-only ledger record: PR link, commit SHA, plan/artifact hash, target environment and scope, executor identity, approver, timestamp, and outcome. It is generated from pipeline state — not maintained by hand — and is durable and queryable, serving both the audit record and the DORA signals ([ADR 0013](./0013-platform-metrics-and-dora.md)).
 
-- **`plan` runs as a PR build-validation check** — every PR shows its plan; no apply happens on a PR.
-- **`apply` runs only post-merge, per environment**, behind an Azure DevOps **Environment** with approvals and checks. Production apply requires an approver who is not the author — segregation of duties ([ADR 0007](./0007-change-as-code.md) §2), enforced by the gate, not by ceremony.
-- **Promotion is dev → staging → prod**, each an environment-subscription (ADR 0024 §3). The same artifact promotes across environments; environments differ by input, not by rebuild.
-- **Standard / normal / emergency** (ADR 0007 §4) map to conditional stages + PR tags: standard auto-merges on green; normal needs CODEOWNERS review; emergency goes through break-glass with the 24-hour auto-PR-back (ADR 0007 §5) implemented as a pipeline that captures the PIM-elevated diff.
+### 4. A scheduled pipeline detects drift
 
-### 4. The deployment ledger is generated by the apply stage, never hand-maintained
+A scheduled `plan` runs against each root's state; a non-zero plan opens a work item ([AP-004](../anti-patterns.md#ap-004--configuration-drift), [ADR 0007](./0007-change-as-code.md) §6).
 
-The apply stage emits an append-only, audit-grade **ledger record** per deployment containing at least: PR link, commit SHA, plan/artifact hash, target environment + ADR 0024 scope, executor identity (the federated service connection), approver, timestamp, and outcome. This is the AP-007 / ADR 0007 §3 ledger made concrete. It is **generated from pipeline run state** — humans do not maintain it — and is durable and queryable so it can serve two consumers: auditors (the change-authorization record) and [ADR 0013](./0013-platform-metrics-and-dora.md) (DORA deployment-frequency / lead-time / change-fail signals). The exact store and schema are a follow-up (§ deferred); the **contents and the generated-not-authored property** are decided here.
+### 5. Pipeline agents run with a least-privilege identity and a path to private endpoints
 
-### 5. A scheduled pipeline detects drift and opens a work item
+State and many resources are private ([ADR 0017](./0017-terraform-state-and-backend.md) §2, [ADR 0018](./0018-network-topology-hub-spoke.md)). The apply and drift agents therefore need network reachability to the platform's private endpoints and run as the federated identity (§2), not as a broadly-privileged account.
 
-Per [ADR 0017](./0017-terraform-state-and-backend.md) §6 and [ADR 0007](./0007-change-as-code.md) §6, a scheduled pipeline runs `terraform plan` against each root's remote state; a non-zero plan opens an Azure Boards work item that triages to (a) a code bug, (b) a missed break-glass back-fill, or (c) external change ([AP-004](../anti-patterns.md#ap-004--configuration-drift)). This requires the agent to have a network path to the network-restricted state and resources (ADR 0017 §2) — see §6.
+### 6. CI validates the module contract
 
-### 6. Pipelines run on agents with a least-privilege identity and a path to private endpoints
-
-Because state and many resources are private (ADR 0017 §2), the apply/drift agents need a **network path to the platform's private endpoints** and run as the federated identity (§2) — not as a broadly-privileged account. Whether that is a self-hosted agent pool in the platform network, or a managed pool with VNet injection, is networking-topology-dependent and deferred to that work (roadmap #8/#9). The *requirement* — private reachability + least-privilege identity — is decided here.
-
-### 7. CI validates the contract, not just the code
-
-PR validation runs the repo-hygiene checks **plus the manifest validation** the schema and [ADR 0011](./0011-module-manifest.md) claim CI performs: each `manifest.yaml` is validated against `schemas/module-manifest.schema.json` and checked for parity with the module's `variables.tf` / `outputs.tf`. (The repo's current CI omits this; closing that gap is part of #5.)
+PR validation runs `fmt` / `validate` / `terraform test` plus manifest validation: each `manifest.yaml` is validated against `schemas/module-manifest.schema.json` and checked for parity with the module's `variables.tf` / `outputs.tf` ([ADR 0011](./0011-module-manifest.md)).
 
 ## What this does not decide
 
-- **Concrete org / project / pool / service-connection names and the agent topology** — adopter data; the self-hosted-vs-managed-pool networking choice is deferred to the networking work (#8/#9).
-- **The ledger's storage and schema** — a durable, queryable store (Azure Boards, a Log Analytics table, a published artifact) and its field schema are a follow-up; this ADR fixes the contents and that it is generated.
-- **The actual `azure-pipelines.yml`, the GitHub Actions disposition, and the `docs/ai-usage.md` corrections** — implementation, roadmap #5.
-- **Standard-change pattern definitions and the commit-signing mechanism** — already deferred by ADR 0007 §"What this does not decide"; unchanged here.
-- **Break-glass diff-capture mechanism** — the *requirement* (PIM-elevated change captured as a back-fill PR within 24h) is ADR 0007 §5; the capture tooling is implementation.
-- **Migration sequencing for an adopter already on a different CI/CD** — an operational runbook, not this contract.
+- **The CI/CD platform.** Azure DevOps Pipelines is the reference implementation; the controls are platform-agnostic. An adopter's platform is their choice.
+- **Concrete org, project, agent-pool, and service-connection identifiers, and the agent network topology** — adopter and networking-layer concerns.
+- **The ledger's storage and field schema** — a durable, queryable store; the record's contents are fixed here.
+- **Standard-change pattern definitions and the commit-signing mechanism** — set by [ADR 0007](./0007-change-as-code.md).
+- **The break-glass diff-capture tooling** — the requirement (a captured back-fill PR within 24 hours) is [ADR 0007](./0007-change-as-code.md) §5.
 
 ## Reversibility
 
-**Two-way on the platform, load-bearing on the controls — exactly as ADR 0007 framed it.** Choosing Azure DevOps is a configuration decision: ADR 0007's portability table maps every control to a GitHub-Actions equivalent, so a future move is a port, not a redesign. What is genuinely load-bearing is the **deployment-ledger contract** (§4) and the **OIDC-only, no-static-secrets posture** (§2): the ledger feeds DORA (ADR 0013) and the audit story, so its fields are additive-only once consumers bind to them, and loosening the identity posture to static secrets would dismantle the evidence and re-open [AP-006](../anti-patterns.md#ap-006--secret-rotation-toil). Both are cheap to hold from day one and expensive to retrofit — so they are committed up front, while the platform under them stays swappable. What would have to change to undo the platform choice: the YAML and the service-connection wiring; the controls and the ledger contract survive the move.
+The controls are load-bearing; the platform under them is not. Porting to another CI/CD platform maps each control to its equivalent (ADR 0007's table) — configuration, not architecture. The two parts to hold from the start are the deployment-ledger contract (§3) and the OIDC-only identity posture (§2): the ledger feeds DORA ([ADR 0013](./0013-platform-metrics-and-dora.md)) and the audit story, so its fields are additive-only once consumed, and static-secret access would dismantle the evidence ([AP-006](../anti-patterns.md#ap-006--secret-rotation-toil)).
 
 ## Consequences
 
 **Positive.**
 
-- ADR 0007's three deferred items — platform, ledger, auto-PR-back — now have concrete homes (§1, §4, §3).
-- The AP-009 toolchain misrepresentation is named and scheduled for correction (§1, #5): the repo will stop implying GitHub Actions is the estate's CD.
-- No static secrets anywhere in CD (§2): one federated identity authenticates to Azure and to state, satisfying ADR 0009 and ADR 0017 in one stroke.
-- The ledger becomes real audit evidence *and* the DORA signal source (§4 → ADR 0013), from one generated artifact.
-- Segregation of duties and environment promotion are enforced by gates (§3), not by CAB ceremony (AP-007).
+- No static secrets in CD: one federated identity authenticates to Azure, to state, and to the target subscription (§2).
+- The ledger is audit evidence and the DORA signal source from one generated artifact (§3).
+- Segregation of duties and environment promotion are enforced by gates, not ceremony ([AP-007](../anti-patterns.md#ap-007--change-management-theater)).
+- Plans are visible on every PR; applies are approved and promoted.
 
 **Negative — and accepted.**
 
-- A split toolchain (GitHub source + Azure DevOps CD) has two control planes to wire — GitHub branch protection *and* Azure Pipelines environment checks. We accept it: it is the confirmed reality, and ADR 0007's controls hold across both.
-- Private-reachable agents (§6) are more setup than Microsoft-hosted runners. We accept it as the cost of network-restricted state and resources (ADR 0017); the alternative is exposing them publicly, which is the worse trade.
-- The ledger and manifest-validation steps are build effort the current GitHub Actions never paid. We accept it: an un-generated ledger and an unvalidated manifest are exactly the AP-007 / AP-009 gaps this ADR closes.
+- A split source/CD toolchain has two control planes to wire — branch protection and pipeline gates. The controls hold across both ([ADR 0007](./0007-change-as-code.md)).
+- Private-reachable agents are more setup than hosted runners — the cost of network-restricted state and resources ([ADR 0017](./0017-terraform-state-and-backend.md), [ADR 0018](./0018-network-topology-hub-spoke.md)).
+- The ledger and manifest-validation steps are build effort, paid once.
 
 ## Cites
 
-- [AP-007](../anti-patterns.md#ap-007--change-management-theater) — the pipeline is the change-as-code executor and the generated ledger, not CAB ceremony.
-- [AP-009](../anti-patterns.md#ap-009--doc-rot) — the repo's GitHub-Actions-only artifact misrepresents the Azure DevOps toolchain; this ADR names reality.
-- [AP-004](../anti-patterns.md#ap-004--configuration-drift) — the scheduled drift pipeline (§5).
-- [ADR 0007](./0007-change-as-code.md) — this ADR is its mechanism; it resolves ADR 0007's deferred platform, ledger, and auto-PR-back.
-- [ADR 0009](./0009-secrets-ephemeral-by-default.md) — OIDC federation, no static secrets in the deploy identity.
+- [AP-007](../anti-patterns.md#ap-007--change-management-theater) — the pipeline is the change-as-code executor and the generated ledger.
+- [AP-004](../anti-patterns.md#ap-004--configuration-drift) — the scheduled drift pipeline.
+- [AP-006](../anti-patterns.md#ap-006--secret-rotation-toil) — OIDC federation, no static secrets in the deploy identity.
+- [ADR 0007](./0007-change-as-code.md) — the change-as-code controls this architecture carries.
+- [ADR 0009](./0009-secrets-ephemeral-by-default.md) — OIDC federation, no static secrets.
 - [ADR 0013](./0013-platform-metrics-and-dora.md) — the deployment ledger is the DORA signal source.
-- [ADR 0017](./0017-terraform-state-and-backend.md) — the pipeline identity accesses state; it runs the drift job against it.
-- [ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md) — promotion stages map to environment-subscriptions; apply binds to the scope vocabulary.
+- [ADR 0017](./0017-terraform-state-and-backend.md) — the pipeline identity accesses state and runs the drift job.
+- [ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md) — promotion stages map to environment-subscriptions.
