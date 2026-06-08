@@ -1,8 +1,14 @@
 # examples/
 
-Reference compositions — foundation and workload-pattern modules wired together into realistic scenarios. Examples are **not modules**; they don't ship policy or get tested in CI like modules do. They exist to demonstrate composition and to be copied as starting points.
+Reference compositions — foundation and workload-pattern modules wired together into realistic scenarios. Examples are **not modules**; they don't ship policy or `terraform test` suites. CI validates them (`init` + `validate`). They exist to demonstrate composition and to be copied as starting points.
 
-**Status: deferred.** No examples ship yet. Two are planned:
+## Shipping
+
+- [`reference-landingzone/`](./reference-landingzone/) — a platform landing zone composed from the foundation and platform-services modules. The worked demonstration of composition by output data ([ADR 0004](../docs/decisions/0004-composition-by-output-data.md)).
+
+## Planned
+
+Both are blocked on real information about the target integration, not on the repo:
 
 - [`saas-core-integration/`](./saas-core-integration/) — AWS-hosted SaaS core ↔ Azure platform integration. The Lumin Digital cross-cloud story.
 - [`legacy-replatform/`](./legacy-replatform/) — vendor BPM and data platforms migrated to Azure-native equivalents.
