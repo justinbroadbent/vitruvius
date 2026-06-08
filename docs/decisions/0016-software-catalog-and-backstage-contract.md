@@ -1,7 +1,7 @@
 ---
 id: 16
 title: Software catalog contract — manifests are the source; Backstage is a derived view
-status: proposed
+status: accepted
 date: 2026-06-02
 categories: [foundation, integration, ai]
 supersedes: []
