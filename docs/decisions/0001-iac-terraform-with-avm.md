@@ -47,7 +47,7 @@ We do **not** use Azure Blueprints (deprecated) and we do **not** re-implement p
 
 - Aligned with the existing team standard — no migration cost.
 - AVM gives us a vetted upstream for primitives, with versioned releases and a well-defined contract. We focus our effort on opinionated *composition*, policy, and monitoring.
-- Multi-cloud-curious work (e.g., the SaaS-core integration example, where part of the system lives on AWS) is straightforward in Terraform.
+- Multi-cloud-curious work (e.g., the SaaS-core integration example, where part of the system lives on another cloud) is straightforward in Terraform.
 
 **Negative / things we accept:**
 

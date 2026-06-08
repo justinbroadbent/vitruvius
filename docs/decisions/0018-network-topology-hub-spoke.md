@@ -18,7 +18,7 @@ cites_adrs: [ADR-0004, ADR-0006, ADR-0008, ADR-0017, ADR-0024]
 
 - **Regulated-FS egress control.** A credit union must be able to say where data can leave the network. Known, audited egress points are the answer; unrestricted internet egress is not.
 - **Private-by-default.** State ([ADR 0017](./0017-terraform-state-and-backend.md)) and Key Vault ([ADR 0009](./0009-secrets-ephemeral-by-default.md)) sit behind private endpoints, which require a private-DNS resolution strategy.
-- **A cross-cloud neighbor.** The estate integrates with an AWS-hosted SaaS banking core ([ADR 0006](./0006-service-discovery-three-layers.md)); address space must not overlap with it or with on-prem.
+- **A cross-cloud neighbor.** The estate integrates with a vendor-hosted SaaS banking core on another cloud ([ADR 0006](./0006-service-discovery-three-layers.md)); address space must not overlap with it or with on-prem.
 - **Reference, not blueprint.** The adopter has a tenant, an ALZ connectivity subscription, and real CIDRs. This ADR decides the shape and binds to ADR 0024's scopes; the numbers are the adopter's.
 
 ## Decision
@@ -33,7 +33,7 @@ Peering is hub↔spoke only. East-west traffic that must cross spokes routes thr
 
 ### 3. Address space is centrally allocated, non-overlapping, and documented
 
-Address space is allocated centrally, is non-overlapping across environments, regions, on-prem, and the AWS SaaS side, and is documented as code in the environment roots. The reference scheme is a per-environment-per-region supernet carved into spoke subnets; the concrete base prefixes, VNet/subnet sizes, and region pairs are adopter data.
+Address space is allocated centrally, is non-overlapping across environments, regions, on-prem, and the other cloud's SaaS core, and is documented as code in the environment roots. The reference scheme is a per-environment-per-region supernet carved into spoke subnets; the concrete base prefixes, VNet/subnet sizes, and region pairs are adopter data.
 
 ### 4. Egress is default-deny through the hub firewall; egress points are known and audited
 
