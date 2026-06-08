@@ -4,6 +4,8 @@ A starter platform-architecture library for a regulated financial-services organ
 
 Named for [Vitruvius](https://en.wikipedia.org/wiki/Vitruvius), the Roman architect whose three principles — *firmitas, utilitas, venustas* (durability, utility, elegance) — translate cleanly to the review criteria every module here is held to.
 
+> **New here?** Start with the [**white paper**](./docs/whitepaper.md) — it explains the whole architecture, every decision, and the reasoning behind them, organized by theme rather than chronology.
+
 ## What this is
 
 A composable library of Terraform modules, examples, and policy-as-code that:
@@ -31,6 +33,7 @@ vitruvius/
   CONTRIBUTING.md           # how anyone contributes a module, ADR, or anti-pattern
   LICENSE                   # Apache-2.0
   docs/
+    whitepaper.md           # the whole architecture explained, by theme — start here
     principles.md           # firmitas / utilitas / venustas → concrete rules
     golden-paths.md         # master principle: opinionated cross-cutting, free intra-app
     composition.md          # how modules layer; what shapes are forbidden
