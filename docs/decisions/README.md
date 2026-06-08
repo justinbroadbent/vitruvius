@@ -24,12 +24,14 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 | [0013](0013-platform-metrics-and-dora.md) | Platform health is measured; DORA is the starting frame | accepted | observability, change-management, governance | 2026-04-27 |
 | [0014](0014-slos-as-a-discipline.md) | SLOs are a per-workload discipline; the platform provides the framework, not the targets | accepted | observability, governance | 2026-04-27 |
 | [0015](0015-disaster-recovery-and-business-continuity.md) | Disaster recovery is per-workload; the platform provides the primitives | accepted | governance, security, foundation | 2026-04-27 |
+| [0016](0016-software-catalog-and-backstage-contract.md) | Software catalog contract — manifests are the source; Backstage is a derived view | accepted | foundation, integration, ai | 2026-06-02 |
 
 ## By category
 
 ### ai
 
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
+- [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
 
 ### architecture
 
@@ -52,6 +54,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0010](0010-tag-taxonomy.md) — Tag taxonomy is small, mandatory, vocabulary-controlled, operational
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
+- [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
 
 ### governance
 
@@ -70,6 +73,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 ### integration
 
 - [0006](0006-service-discovery-three-layers.md) — Service discovery as three concerns with three tools
+- [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
 
 ### networking
 
@@ -96,7 +100,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 
 ## By status
 
-### accepted (15)
+### accepted (16)
 
 - [0001](0001-iac-terraform-with-avm.md) — IaC is Terraform, anchored on Azure Verified Modules
 - [0002](0002-observability-otel-first.md) — Observability is OpenTelemetry-first, emission target is configuration
@@ -113,3 +117,4 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
 - [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
+- [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
