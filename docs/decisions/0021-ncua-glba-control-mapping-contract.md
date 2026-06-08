@@ -1,5 +1,5 @@
 ---
-id: 17
+id: 21
 title: Compliance control mapping is declared data; the control map is a derived view
 status: accepted
 date: 2026-06-08
@@ -10,7 +10,7 @@ cites_anti_patterns: [AP-009, AP-005]
 cites_adrs: [ADR-0003, ADR-0005, ADR-0008, ADR-0011, ADR-0016]
 ---
 
-# ADR 0017 — Compliance control mapping is declared data; the control map is a derived view
+# ADR 0021 — Compliance control mapping is declared data; the control map is a derived view
 
 ## Context
 
