@@ -1,0 +1,129 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: observability-substrate
+  area: platform-services
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: The central observability substrate — Log Analytics workspace, workspace-based Application Insights, and platform alert-routing. The target every module's diagnostic settings and the OTel collector's Azure Monitor exporter route to (ADR 0005).
+
+spec:
+  inputs:
+    - name: log_analytics_workspace_name
+      type: string
+      required: true
+      description: Name of the central Log Analytics workspace. Produced by foundation/naming upstream.
+    - name: application_insights_name
+      type: string
+      required: true
+      description: Name of the workspace-based Application Insights component. Produced by foundation/naming upstream.
+    - name: resource_group_name
+      type: string
+      required: true
+      description: Resource group the substrate is created in. The consumer (environment root) owns and supplies it; this module does not create it (ADR 0004 / ADR 0024).
+    - name: location
+      type: string
+      required: true
+      description: Azure region for the substrate resources.
+    - name: tags
+      type: map(string)
+      required: false
+      description: Tags applied to every resource. Produce a conformant map with foundation/tags (ADR 0010).
+    - name: log_analytics_retention_in_days
+      type: number
+      required: false
+      description: Hot-tier retention in days (default 30 per ADR 0005). Per-environment tuning is the consumer's call.
+    - name: log_analytics_daily_quota_gb
+      type: number
+      required: false
+      description: Daily ingestion cap in GB — cost guardrail against AP-002. Null (default) means no cap.
+    - name: log_analytics_sku
+      type: string
+      required: false
+      description: Log Analytics pricing SKU. Default PerGB2018.
+      vocabulary: [PerGB2018, CapacityReservation, Free, Standard, Premium]
+    - name: application_insights_retention_in_days
+      type: number
+      required: false
+      description: Application Insights retention in days. Default 90.
+      vocabulary: ["30", "60", "90", "120", "180", "270", "365", "550", "730"]
+    - name: action_group_name
+      type: string
+      required: false
+      description: Name of the platform action group. Only created when alert_email_receivers is non-empty.
+    - name: action_group_short_name
+      type: string
+      required: false
+      description: Short name for the action group (Azure 12-char limit). Default 'vitruvius'.
+    - name: alert_email_receivers
+      type: list(object)
+      required: false
+      description: Email receivers ({name, email_address}) for the platform action group. Empty (default) creates no action group. Owner-based routing (ADR 0010) is the consumer's to expand.
+
+  outputs:
+    - name: log_analytics_workspace_id
+      type: string
+      description: Resource ID of the central LAW — the substrate input foundation/diagnostic-settings and the workload patterns consume as log_analytics_workspace_id.
+    - name: application_insights_id
+      type: string
+      description: Resource ID of the workspace-based Application Insights component.
+    - name: application_insights_connection_string
+      type: string
+      description: Application Insights connection string — the OTel collector's Azure Monitor exporter target. Sensitive.
+    - name: application_insights_instrumentation_key
+      type: string
+      description: Application Insights instrumentation key. Legacy; prefer the connection string. Sensitive.
+    - name: action_group_id
+      type: string
+      description: Resource ID of the platform action group; null when no receivers were supplied.
+
+  dependencies:
+    avm:
+      - source: Azure/avm-res-operationalinsights-workspace/azurerm
+        version: ~> 0.5
+      - source: Azure/avm-res-insights-component/azurerm
+        version: ~> 0.4
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: true
+    secrets: false
+    networking: false
+    naming: false
+    tagging: false
+
+  ships:
+    policy: []
+    monitoring:
+      - substrate-deletion-alert
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0001
+      - ADR-0003
+      - ADR-0005
+      - ADR-0018
+    anti_patterns:
+      - AP-001
+      - AP-002
+      - AP-011
+
+  examples:
+    - name: minimal
+      description: Workspace + workspace-based App Insights in an existing RG, default retention, no cap, no alert routing.
+    - name: full
+      description: Tuned retention, a daily ingestion cap, and an action group wired to on-call so the substrate-deletion alert pages.
+
+  tests:
+    - name: contract_compliance
+      type: terraform_test
+      description: Confirms the substrate exposes the workspace/App Insights IDs and connection string, that the action group is created and wired only when receivers are supplied, and that the substrate-deletion alert always ships.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (sub-floor retention, unsupported App Insights retention, over-long action-group short name, uppercase location, zero daily quota) are rejected.
