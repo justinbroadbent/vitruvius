@@ -1,0 +1,87 @@
+# Reference environment root: a platform landing zone composed from the
+# foundation and platform-services modules. The values here are illustrative —
+# an operator copies this root and substitutes their own org code, region,
+# management group, and subscription.
+#
+# Composition is by output data (ADR 0004): each module's outputs feed the next
+# module's inputs at this consumer boundary. No module imports another.
+
+terraform {
+  required_version = ">= 1.9.0"
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = ">= 3.100.0"
+    }
+  }
+}
+
+provider "azurerm" {
+  features {}
+  # subscription_id is supplied at apply time via ARM_SUBSCRIPTION_ID or -var.
+}
+
+# Conventions — canonical names and the tag map every resource carries.
+
+module "naming" {
+  source = "../../modules/foundation/naming"
+
+  org      = var.org
+  workload = "platform"
+  env      = var.env
+  region   = var.location
+}
+
+module "tags" {
+  source = "../../modules/foundation/tags"
+
+  owner                = "platform-team"
+  env                  = var.env
+  cost_center          = "cc-1001"
+  data_classification  = "internal"
+  business_criticality = "tier-1"
+}
+
+# The platform resource group. The consumer root owns resource groups; the
+# modules take the name and never create it (ADR 0004 / ADR 0024).
+
+resource "azurerm_resource_group" "platform" {
+  name     = module.naming.names.resource_group
+  location = var.location
+  tags     = module.tags.tags
+}
+
+# Platform identities — the deploy and policy-remediation UAIs.
+
+module "identity" {
+  source = "../../modules/foundation/identity"
+
+  resource_group_name = azurerm_resource_group.platform.name
+  location            = var.location
+  tags                = module.tags.tags
+}
+
+# The observability substrate. Names come from naming; its workspace ID is the
+# seam the diagnostic-settings initiative routes to.
+
+module "observability_substrate" {
+  source = "../../modules/platform-services/observability-substrate"
+
+  log_analytics_workspace_name = module.naming.names.log_analytics_workspace
+  application_insights_name    = module.naming.names.application_insights
+  resource_group_name          = azurerm_resource_group.platform.name
+  location                     = var.location
+  tags                         = module.tags.tags
+}
+
+# Substrate-routing policy. diagnostic-settings consumes the substrate's
+# workspace ID — the end-to-end seam this root exists to demonstrate.
+# Audit-before-Deny defaults (ADR 0008).
+
+module "diagnostic_settings" {
+  source = "../../modules/foundation/diagnostic-settings"
+
+  policy_management_group_id = var.platform_management_group_id
+  policy_assignment_scope    = var.platform_management_group_id
+  log_analytics_workspace_id = module.observability_substrate.log_analytics_workspace_id
+}

@@ -64,6 +64,7 @@ jobs:
           - modules/platform-services/observability-substrate/examples/full
           - modules/workload-patterns/web-api-aks/examples/minimal
           - modules/workload-patterns/web-api-aks/examples/full
+          - examples/reference-landingzone
     defaults:
       run:
         working-directory: ${{ matrix.example }}
