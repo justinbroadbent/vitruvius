@@ -31,6 +31,7 @@ jobs:
           - modules/foundation/tags
           - modules/foundation/diagnostic-settings
           - modules/foundation/identity
+          - modules/platform-services/observability-substrate
           - modules/workload-patterns/web-api-aks
     defaults:
       run:
@@ -59,6 +60,8 @@ jobs:
           - modules/foundation/diagnostic-settings/examples/minimal
           - modules/foundation/diagnostic-settings/examples/full
           - modules/foundation/identity/examples/minimal
+          - modules/platform-services/observability-substrate/examples/minimal
+          - modules/platform-services/observability-substrate/examples/full
           - modules/workload-patterns/web-api-aks/examples/minimal
           - modules/workload-patterns/web-api-aks/examples/full
     defaults:

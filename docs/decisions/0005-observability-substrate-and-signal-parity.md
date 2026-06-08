@@ -39,7 +39,7 @@ The observability story has three coupled rules.
 
 **3. Signal parity across environments.** Identical OTel instrumentation in dev, staging, and prod. Retention differs (dev: 7d; staging: 14d; prod: per tier above); the *signal set* does not. Performance budgets in CI block deploys that regress p99 latency, error rate, or throughput beyond a per-service threshold. The rule: if it is not monitored in staging, it does not deploy to production.
 
-Modules ship the diagnostic settings and alerts that govern their resources (per [ADR 0003](./0003-modules-ship-policy-and-monitoring.md)). The collector and substrate are deployed by `modules/platform-services/observability`.
+Modules ship the diagnostic settings and alerts that govern their resources (per [ADR 0003](./0003-modules-ship-policy-and-monitoring.md)). The substrate (Log Analytics workspace + Application Insights) is deployed by `modules/platform-services/observability-substrate`; the collector deployment is host-dependent and separate.
 
 ## What this does not decide
 
