@@ -1,7 +1,7 @@
 ---
 id: 24
 title: Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
-status: proposed
+status: accepted
 date: 2026-06-08
 categories: [foundation, architecture, governance]
 supersedes: []

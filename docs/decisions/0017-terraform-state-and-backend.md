@@ -1,7 +1,7 @@
 ---
 id: 17
 title: Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
-status: proposed
+status: accepted
 date: 2026-06-08
 categories: [foundation, infrastructure, security]
 supersedes: []
