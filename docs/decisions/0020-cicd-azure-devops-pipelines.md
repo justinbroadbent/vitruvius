@@ -1,7 +1,7 @@
 ---
 id: 20
 title: CI/CD is Azure DevOps Pipelines — OIDC-federated, plan-gated, with a generated deployment ledger
-status: proposed
+status: accepted
 date: 2026-06-08
 categories: [process, infrastructure, governance]
 supersedes: []
