@@ -1,0 +1,94 @@
+---
+id: 17
+title: Compliance control mapping is declared data; the control map is a derived view
+status: proposed
+date: 2026-06-08
+categories: [security, governance, compliance]
+supersedes: []
+superseded_by: []
+cites_anti_patterns: [AP-009, AP-005]
+cites_adrs: [ADR-0003, ADR-0005, ADR-0008, ADR-0011, ADR-0016]
+---
+
+# ADR 0017 — Compliance control mapping is declared data; the control map is a derived view
+
+## Context
+
+[ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) decided *how* every policy in this repo behaves — grouped into initiatives, audit-before-deny, tiered enforcement, exemptions as first-class. It deliberately left open *which* controls those initiatives map to and *how* that mapping is recorded. ADR 0008 §1 only says the initiative "documents the controls it maps to — NIST CSF subcategory, GLBA Safeguards Rule section, internal risk register entry." Today that is **prose**: no field carries it, nothing checks it, and the [`policies/ncua-glba`](../../policies/ncua-glba/README.md) bundle that is supposed to hold the "control map" is still a stub.
+
+A credit union's NCUA examination and its GLBA Safeguards Rule (16 CFR 314) obligations both turn on the same artifact: a **control map** — for each control in scope, what implements it, and what evidence proves it operates. The forces in tension:
+
+- **Auditors need a control map with evidence.** A list of policies is not a control map; a control map is keyed by *control*, says what is automated vs. manual vs. open, and links to evidence.
+- **The map must not rot.** A control map maintained as a spreadsheet or wiki is [AP-009 — doc rot](../anti-patterns.md#ap-009--doc-rot) waiting to happen: it drifts from the policies it claims to describe, and the drift is invisible until an exam finds it.
+- **The platform team cannot pick the controls alone.** Which NIST CSF subcategories and GLBA sections are in scope, and whether a given Azure Policy *satisfies* a control to an examiner's standard, is a security/compliance-partner conversation — inventing it unilaterally produces controls that don't match the org's risk posture (the `ncua-glba` README's stated blocker, and [AP-012 — seagull architecture](../anti-patterns.md#ap-012--seagull-architecture)).
+
+There is a decision we can make **now**, before those partners are in the room, that unblocks the rest: fix the **control-mapping contract** — where a mapping is declared, and how the map is produced — so the catalog can be built incrementally without re-architecting. This is the same move as [ADR 0016](./0016-software-catalog-and-backstage-contract.md): decide the source-and-derivation shape; defer the content. The content here is the control catalog; the partners supply it.
+
+## Decision
+
+### 1. Control mappings are declared as structured data, per initiative
+
+Every policy initiative declares the controls it provides evidence for, as a machine-readable list of framework-qualified control identifiers — e.g. NIST CSF `PR.AC-1`, GLBA Safeguards `314.4(c)(1)`, or an internal risk-register ID. This sits alongside the plain-English *intent* ADR 0008 §1 already requires; it makes the "documents the controls it maps to" clause concrete instead of prose. It extends the structured-contract principle of [ADR 0011](./0011-module-manifest.md) — the manifest is already where a module's structured facts live; control mappings are more of the same.
+
+The identifier is **framework-qualified** (`csf:PR.AC-1`, `glba:314.4(c)(1)`), so the contract is framework-agnostic and an adopter can key on CSF 1.1, CSF 2.0, a Safeguards revision, or an internal framework without a schema change.
+
+### 2. The control map is derived, never hand-maintained
+
+A generator reads the declared mappings across every initiative and emits the **bidirectional** control map: control → implementing initiatives/policies, and initiative → controls. The map is a build artifact, regenerated from the declarations and checked for drift in CI — exactly the source-and-derived split of [ADR 0016](./0016-software-catalog-and-backstage-contract.md) (manifests are the source; the view is generated). A derived map cannot drift from the policies it describes ([AP-009](../anti-patterns.md#ap-009--doc-rot)).
+
+The mapping is **many-to-many** — one policy can serve several controls; one control is often satisfied by several policies — which is precisely why it is derived rather than a hand-kept 1:1 table.
+
+### 3. Coverage is explicit, and gaps are first-class
+
+The derived map enumerates the controls **in scope**, not only the ones already implemented. A control with no implementing policy is rendered as a declared gap — `manual` (a process control evidenced outside Azure Policy) or `unimplemented` (open work) — never as silence. An auditor reading the map sees what is automated, what is manual, and what is open. A map that lists only what exists reads as falsely green; this clause forbids that.
+
+### 4. Evidence is derived from telemetry, not assembled by hand
+
+Per ADR 0008 and [ADR 0005](./0005-observability-substrate-and-signal-parity.md), audit-mode policy-evaluation telemetry already flows to the observability substrate. The control map links each control to (a) the policy definitions that implement it and (b) the live evaluation/compliance state from that telemetry. The auditor-facing **evidence pack** is therefore generated from substrate data, not curated by hand. The evidence-pack generator itself remains a concept-first follow-up (the `ncua-glba` README already places it there) — this ADR decides only that evidence is *derived*, not *authored*.
+
+### 5. Initiative organization: per-control-family, and mappings live with the policy
+
+Initiatives follow the `ncua-glba` README's shape — grouped by control family with plain-language names (e.g. `vitruvius-csf-pr-ac` for Identity Management & Access Control). Consistent with [ADR 0003](./0003-modules-ship-policy-and-monitoring.md), a module that ships its own `policy/` initiative declares *its* control mappings there; the `policies/ncua-glba` bundle is the **aggregation view** across the estate, not the sole home for mappings. The derived map unions both.
+
+### 6. The lifecycle is ADR 0008's, unchanged
+
+Control-mapped policies still go audit-before-deny, still run tiered (sandbox/dev `Audit`, production `Deny` on evidence), and still treat exemptions as first-class. An **exemption is itself evidence** — a documented, time-boxed, owner-attributed control deviation — and appears in the map against the control it touches. This ADR adds the mapping contract on top of ADR 0008; it does not revisit the lifecycle.
+
+## What this does not decide
+
+- **The actual control catalog** — which NIST CSF subcategories and GLBA Safeguards sections are in scope, and which Azure Policy implements each, is the security/compliance-partner conversation the `ncua-glba` README flags as the blocker. This ADR is the container that work fills, not the work.
+- **The exact schema/manifest field** that carries the mappings — naming the shape here; the JSON Schema change to `module-manifest.schema.json` (and any `ncua-glba` initiative-metadata format) is a follow-up PR, the same way ADR 0016's converter is separate from its contract.
+- **The evidence-pack generator and the auditor artifact format** — deferred, concept-first.
+- **Whether a given policy satisfies a control to an examiner's standard** — that is the compliance partner's and the auditor's call, not a platform-team assertion. The contract records the *claim*; acceptance is external.
+- **Framework version and revision** (CSF 1.1 vs 2.0, which Safeguards revision) — the framework-qualified identifier (§1) keeps the contract version-agnostic; the adopter and compliance team pin the framework.
+- **PCI** — out of scope for this bundle by deliberate repo decision (root `README.md`).
+
+## Reversibility
+
+**Cheap to change (two-way door) — by construction**, the same as ADR 0016. Mappings are declared data and the map is a regenerated artifact: change a declaration, regenerate, done — there is no infrastructure and no hand-maintained table to migrate. The one thing worth getting stable early is the **control-identifier vocabulary** (§1), because that is what external references — audit reports, the evidence pack, a regulator's findings — bind to; the framework-qualified, framework-agnostic keying is the optionality that keeps even *that* a non-trivial-but-survivable change. Nothing here is a one-way door: the contract can be reshaped before the catalog is large, which is exactly why deciding it now is cheap.
+
+## Consequences
+
+**Positive.**
+
+- The control map cannot rot ([AP-009](../anti-patterns.md#ap-009--doc-rot)): it is derived from the policies in CI, not kept in a spreadsheet that drifts.
+- Auditors get a control-keyed map with explicit coverage — automated, manual, and open controls all visible — and evidence derived from live telemetry rather than assembled by hand.
+- The platform team can build the catalog **incrementally** with compliance partners, one control family at a time, without re-architecting — the contract is fixed, only the content grows.
+- Consistent with the rest of the repo: same source-and-derived split as ADR 0016, same structured-contract principle as ADR 0011, same lifecycle as ADR 0008.
+- Many-to-many reality is modeled honestly rather than forced into a brittle 1:1 table.
+
+**Negative — and accepted.**
+
+- Declaring mappings is per-initiative authoring toil. We accept it: it is structured data, drift-checked, and far cheaper than reconstructing a control map at exam time.
+- The derived map is only as honest as its declarations — a wrong or optimistic mapping produces a wrong map. We mitigate with explicit gap controls (§3) and by keeping examiner acceptance external (a mapping is a claim, not a verdict).
+- A structured control map can *imply* more assurance than audit-mode-only enforcement actually delivers. We mitigate by surfacing enforcement state (audit vs. deny, per ADR 0008) and exemptions directly in the map, so "mapped" never silently reads as "enforced."
+
+## Cites
+
+- [AP-009](../anti-patterns.md#ap-009--doc-rot) — the control map is derived, never forked, so it cannot rot.
+- [AP-005](../anti-patterns.md#ap-005--sweeping-policy-bans) — mapped policies still follow the scoped, audited lifecycle (via ADR 0008), not sweeping bans.
+- [ADR 0003](./0003-modules-ship-policy-and-monitoring.md) — modules ship their own policy and now declare its control mappings.
+- [ADR 0005](./0005-observability-substrate-and-signal-parity.md) — audit-mode evaluation telemetry is the evidence substrate.
+- [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) — the policy lifecycle this contract sits on top of.
+- [ADR 0011](./0011-module-manifest.md) — the structured-contract principle the control mappings extend.
+- [ADR 0016](./0016-software-catalog-and-backstage-contract.md) — the same source-and-derived pattern: declared source, generated view.

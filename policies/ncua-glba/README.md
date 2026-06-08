@@ -18,3 +18,5 @@ What's blocking:
 - PCI is **out of scope** for this bundle by deliberate choice — see the repo-root [`README.md`](../../README.md) "What this is" section.
 
 When the build starts, the right shape is initiative-per-control-family with clear ownership. Initiative names should match the control families in plain language (e.g., `vitruvius-csf-pr-ac` for Identity Management & Access Control), and the evidence-pack generation is a separate concern that consumes the initiative's evaluation telemetry.
+
+The **contract** for all of the above — how an initiative declares the controls it maps to, and how the control map and evidence pack are *derived* rather than hand-maintained — is decided in [ADR 0017](../../docs/decisions/0017-ncua-glba-control-mapping-contract.md). This bundle supplies the *content* (the actual control catalog, with security/compliance partners); ADR 0017 fixes the *shape* so that content can be added incrementally.

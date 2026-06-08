@@ -25,6 +25,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 | [0014](0014-slos-as-a-discipline.md) | SLOs are a per-workload discipline; the platform provides the framework, not the targets | accepted | observability, governance | 2026-04-27 |
 | [0015](0015-disaster-recovery-and-business-continuity.md) | Disaster recovery is per-workload; the platform provides the primitives | accepted | governance, security, foundation | 2026-04-27 |
 | [0016](0016-software-catalog-and-backstage-contract.md) | Software catalog contract — manifests are the source; Backstage is a derived view | accepted | foundation, integration, ai | 2026-06-02 |
+| [0017](0017-ncua-glba-control-mapping-contract.md) | Compliance control mapping is declared data; the control map is a derived view | proposed | security, governance, compliance | 2026-06-08 |
 
 ## By category
 
@@ -41,6 +42,10 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 ### change-management
 
 - [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
+
+### compliance
+
+- [0017](0017-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 
 ### culture
 
@@ -65,6 +70,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
 - [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
+- [0017](0017-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 
 ### infrastructure
 
@@ -97,6 +103,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0008](0008-audit-before-deny-policy-lifecycle.md) — Audit-before-Deny policy lifecycle; exemptions are first-class
 - [0009](0009-secrets-ephemeral-by-default.md) — Secrets are ephemeral by default; static secrets are documented exceptions
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
+- [0017](0017-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 
 ## By status
 
@@ -118,3 +125,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 - [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
+
+### proposed (1)
+
+- [0017](0017-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
