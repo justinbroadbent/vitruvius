@@ -22,7 +22,7 @@ cites_adrs: [ADR-0005, ADR-0007]
 
 The anti-pattern of conflating these into a single mechanism — typically, hand-edited DNS in env vars ([AP-003](../anti-patterns.md#ap-003--hard-coded-service-endpoints)) — produces hard-coded topologies that ossify. Modern Azure has a different right-tool answer for each concern.
 
-A particularly relevant case: this estate integrates with a SaaS digital banking platform hosted on a different cloud (AWS). That cross-cloud, cross-trust integration belongs squarely in the cross-boundary-contract layer, not the runtime layer.
+A particularly relevant case: this estate integrates with a vendor-hosted SaaS digital banking platform running on another cloud. That cross-cloud, cross-trust integration belongs squarely in the cross-boundary-contract layer, not the runtime layer.
 
 ## Decision
 
