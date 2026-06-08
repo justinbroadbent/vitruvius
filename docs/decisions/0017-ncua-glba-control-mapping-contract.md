@@ -1,7 +1,7 @@
 ---
 id: 17
 title: Compliance control mapping is declared data; the control map is a derived view
-status: proposed
+status: accepted
 date: 2026-06-08
 categories: [security, governance, compliance]
 supersedes: []
