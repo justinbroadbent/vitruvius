@@ -47,7 +47,7 @@ variable "tags" {
 variable "log_analytics_retention_in_days" {
   type        = number
   default     = 30
-  description = "Hot-tier retention for the workspace, in days. ADR 0005 reference default is 30 (hot); warm/cold tiering is configured separately. Per-environment tuning (dev 7 / staging 14 / prod tiered) is the consumer's call."
+  description = "Hot-tier retention for the workspace, in days. ADR 0005 reference default is 30 (hot); warm/cold tiering is configured separately. Azure's workspace floor is 30 days — per-environment cost tuning below that is done with the daily quota and table-level retention, not this setting."
 
   validation {
     condition     = var.log_analytics_retention_in_days >= 30 && var.log_analytics_retention_in_days <= 730
@@ -69,11 +69,11 @@ variable "log_analytics_daily_quota_gb" {
 variable "log_analytics_sku" {
   type        = string
   default     = "PerGB2018"
-  description = "Log Analytics pricing SKU. PerGB2018 is the standard pay-as-you-go tier."
+  description = "Log Analytics pricing SKU. PerGB2018 is the standard pay-as-you-go tier. Legacy SKUs (Free, Standard, Premium) are rejected by Azure for new workspaces and are deliberately not offered."
 
   validation {
-    condition     = contains(["PerGB2018", "CapacityReservation", "Free", "Standard", "Premium"], var.log_analytics_sku)
-    error_message = "log_analytics_sku must be one of: PerGB2018, CapacityReservation, Free, Standard, Premium."
+    condition     = contains(["PerGB2018", "CapacityReservation"], var.log_analytics_sku)
+    error_message = "log_analytics_sku must be one of: PerGB2018, CapacityReservation."
   }
 }
 
@@ -86,6 +86,18 @@ variable "application_insights_retention_in_days" {
     condition     = contains([30, 60, 90, 120, 180, 270, 365, 550, 730], var.application_insights_retention_in_days)
     error_message = "application_insights_retention_in_days must be one of: 30, 60, 90, 120, 180, 270, 365, 550, 730."
   }
+}
+
+variable "internet_ingestion_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the workspace and App Insights component accept telemetry over the public internet. False by default (private-by-default, ADR 0018) — which means ingestion requires an Azure Monitor Private Link Scope (AMPLS) the consumer provides; see the README. Set true only for evaluation environments without private networking."
+}
+
+variable "internet_query_enabled" {
+  type        = bool
+  default     = false
+  description = "Whether the workspace and App Insights component answer queries (portal, API) over the public internet. False by default (private-by-default, ADR 0018) — operators need AMPLS-connected network access to query; see the README. Set true only for evaluation environments without private networking."
 }
 
 variable "action_group_name" {

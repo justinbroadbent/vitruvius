@@ -8,8 +8,8 @@ It is the implementation side of [ADR 0005](../../../docs/decisions/0005-observa
 
 | Resource | Via | Why |
 |---|---|---|
-| Log Analytics workspace | AVM `avm-res-operationalinsights-workspace` | The hot-tier substrate. Internet ingestion/query off by default (private-by-default, ADR 0018). |
-| Application Insights (workspace-based) | AVM `avm-res-insights-component` | The default exporter target and APM surface workload patterns consume. |
+| Log Analytics workspace | AVM `avm-res-operationalinsights-workspace` | The hot-tier substrate. Internet ingestion/query set explicitly off by default (private-by-default, ADR 0018). |
+| Application Insights (workspace-based) | AVM `avm-res-insights-component` | The default exporter target and APM surface workload patterns consume. Internet ingestion/query also off by default — the AVM module defaults them **on**, so this module sets them explicitly. |
 | Action group | `azurerm_monitor_action_group` | Alert routing. Created only when `alert_email_receivers` is supplied. |
 | Substrate-deletion alert | `azurerm_monitor_activity_log_alert` | The substrate guards itself (ADR 0008 §3): fires on attempted workspace deletion. |
 
@@ -62,6 +62,15 @@ module "diagnostic_settings" {
   log_analytics_workspace_id = module.substrate.log_analytics_workspace_id # ← the seam
 }
 ```
+
+## Private operation requires an AMPLS (hard prerequisite)
+
+With `internet_ingestion_enabled` / `internet_query_enabled` at their `false` defaults, the workspace and App Insights component accept traffic only over private networking. That path does not exist until the consumer provides an **Azure Monitor Private Link Scope (AMPLS)** wired to the hub's private DNS and private endpoints (ADR 0018) — nothing in this module or the current `modules/networking/` (deferred to v0.2) provisions one. Until then:
+
+- agents and the collector cannot ingest telemetry, and
+- operators cannot query the workspace from the portal,
+
+unless the request originates from an AMPLS-connected network. For an evaluation environment without private networking, set both flags to `true` knowingly — that is the documented escape hatch, not the default.
 
 ## What's deferred (v0.1.0)
 
