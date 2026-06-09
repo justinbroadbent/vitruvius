@@ -1,0 +1,13 @@
+# Normalize line endings. The ADR index generator and terraform fmt both
+# emit LF; without this, a contributor on core.autocrlf=true can commit CRLF
+# and make the CI drift checks fail confusingly.
+* text=auto
+*.tf text eol=lf
+*.tfvars text eol=lf
+*.hcl text eol=lf
+*.ps1 text eol=lf
+*.py text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md text eol=lf

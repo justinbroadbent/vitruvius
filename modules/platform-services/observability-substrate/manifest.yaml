@@ -97,7 +97,7 @@ spec:
   ships:
     policy: []
     monitoring:
-      - substrate-deletion-alert
+      - vitruvius-substrate-deletion
     runbooks: []
 
   cites:
