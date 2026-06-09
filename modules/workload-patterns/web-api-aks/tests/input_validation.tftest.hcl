@@ -142,3 +142,54 @@ run "rejects_invalid_policy_enforcement_mode" {
 
   expect_failures = [var.policy_enforcement_mode]
 }
+
+run "rejects_kv_name_with_consecutive_hyphens" {
+  command = plan
+
+  variables {
+    key_vault_name = "kv-member--api"
+  }
+
+  expect_failures = [var.key_vault_name]
+}
+
+run "rejects_kv_name_with_trailing_hyphen" {
+  command = plan
+
+  variables {
+    key_vault_name = "kv-memberapi-"
+  }
+
+  expect_failures = [var.key_vault_name]
+}
+
+run "rejects_namespace_starting_with_hyphen" {
+  command = plan
+
+  variables {
+    aks_namespace = "-memberapi"
+  }
+
+  expect_failures = [var.aks_namespace]
+}
+
+run "rejects_service_account_ending_with_hyphen" {
+  command = plan
+
+  variables {
+    aks_service_account_name = "memberapi-sa-"
+  }
+
+  expect_failures = [var.aks_service_account_name]
+}
+
+run "rejects_oversized_federated_credential_name" {
+  command = plan
+
+  variables {
+    aks_namespace            = "member-api-namespace-with-a-very-long-rfc1123-compliant-name1"
+    aks_service_account_name = "member-api-service-account-with-very-long-rfc1123-compliant1"
+  }
+
+  expect_failures = [var.aks_service_account_name]
+}

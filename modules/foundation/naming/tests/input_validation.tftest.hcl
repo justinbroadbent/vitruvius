@@ -92,3 +92,42 @@ run "rejects_single_digit_instance" {
 
   expect_failures = [var.instance]
 }
+
+run "rejects_workload_with_trailing_hyphen" {
+  command = plan
+
+  variables {
+    org      = "wsx"
+    workload = "demo-"
+    env      = "dev"
+    region   = "eastus"
+  }
+
+  expect_failures = [var.workload]
+}
+
+run "rejects_workload_with_consecutive_hyphens" {
+  command = plan
+
+  variables {
+    org      = "wsx"
+    workload = "de--mo"
+    env      = "dev"
+    region   = "eastus"
+  }
+
+  expect_failures = [var.workload]
+}
+
+run "rejects_too_long_org" {
+  command = plan
+
+  variables {
+    org      = "toolong"
+    workload = "demo"
+    env      = "dev"
+    region   = "eastus"
+  }
+
+  expect_failures = [var.org]
+}

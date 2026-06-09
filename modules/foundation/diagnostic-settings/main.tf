@@ -15,9 +15,9 @@ locals {
     k => jsondecode(file("${path.module}/policy/${file}"))
   }
 
-  covered_resource_types = [
+  covered_resource_types = sort([
     for k, def in local.policy_definitions : def.policyRule.if.equals
-  ]
+  ])
 
   # Initiative references: one per definition, all pointing the initiative's
   # logAnalyticsWorkspaceId parameter at the per-definition parameter.

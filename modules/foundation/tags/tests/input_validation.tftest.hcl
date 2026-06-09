@@ -116,3 +116,48 @@ run "rejects_invalid_policy_enforcement_mode" {
 
   expect_failures = [var.policy_enforcement_mode]
 }
+
+run "rejects_too_short_app" {
+  command = plan
+
+  variables {
+    owner                = "platform-team"
+    env                  = "dev"
+    cost_center          = "cc-1001"
+    data_classification  = "internal"
+    business_criticality = "tier-2"
+    app                  = "x"
+  }
+
+  expect_failures = [var.app]
+}
+
+run "rejects_component_with_underscore" {
+  command = plan
+
+  variables {
+    owner                = "platform-team"
+    env                  = "dev"
+    cost_center          = "cc-1001"
+    data_classification  = "internal"
+    business_criticality = "tier-2"
+    component            = "api_layer"
+  }
+
+  expect_failures = [var.component]
+}
+
+run "rejects_bare_management_group_name" {
+  command = plan
+
+  variables {
+    owner                      = "platform-team"
+    env                        = "dev"
+    cost_center                = "cc-1001"
+    data_classification        = "internal"
+    business_criticality       = "tier-2"
+    policy_management_group_id = "platform-mg"
+  }
+
+  expect_failures = [var.policy_management_group_id]
+}

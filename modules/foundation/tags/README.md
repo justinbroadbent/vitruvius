@@ -105,7 +105,7 @@ Adding a value to an existing vocabulary (e.g., adding `tier-4`) is two coordina
 1. Update the vocabulary list in the relevant `allowed-values-*.json` policy.
 2. Update `local.vocabularies` in `main.tf` to match.
 
-A test asserts the two stay in sync — `vocabularies_match_adr_0010` will fail if drift is introduced. ADR 0010 must also be updated; the manifest's `cites.decisions` list will catch drift in PR review.
+A plan-time invariant (`terraform_data.vocabulary_invariants` in `main.tf`) reads the policy JSONs and fails any plan — including every `terraform test` run — if they drift from `local.vocabularies`; the `vocabularies_match_adr_0010` test additionally pins the expected values. ADR 0010 must also be updated; the manifest's `cites.decisions` list will catch drift in PR review.
 
 Removing a value is a breaking change. Per ADR 0010, it requires a back-fill plan for existing resources before promotion.
 

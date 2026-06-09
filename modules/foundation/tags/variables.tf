@@ -85,6 +85,11 @@ variable "policy_management_group_id" {
   type        = string
   default     = null
   description = "Management group resource ID where the tag policy definitions, initiative, and assignment are deployed. When null, the module produces only the tag map and ships no policy resources. Per ADR 0008, the assignment is created in Audit enforcement mode by default."
+
+  validation {
+    condition     = var.policy_management_group_id == null ? true : can(regex("^/providers/Microsoft\\.Management/managementGroups/[^/]+$", var.policy_management_group_id))
+    error_message = "policy_management_group_id must be a full management group resource ID ('/providers/Microsoft.Management/managementGroups/<name>'), not a bare name — a bare name passes plan and fails apply."
+  }
 }
 
 variable "policy_effect" {

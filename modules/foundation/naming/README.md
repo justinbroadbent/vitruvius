@@ -16,7 +16,7 @@ For resources that disallow hyphens (storage accounts, container registries), th
 <resource-abbr><org><workload><env><region-abbr><instance>
 ```
 
-Names are truncated to per-type length limits where necessary. See `main.tf` for the full per-resource construction.
+Length-limited types (storage accounts, Key Vaults) fall back to a compact form with a deterministic hash suffix when the inputs exceed the cap. See `main.tf` for the full per-resource construction.
 
 ## Inputs
 
@@ -58,7 +58,7 @@ module "naming" {
 resource "azurerm_resource_group" "this" {
   name     = module.naming.names.resource_group
   location = "eastus"
-  tags     = local.required_tags
+  tags     = module.tags.tags # from foundation/tags (ADR 0010)
 }
 ```
 
@@ -83,7 +83,7 @@ Maintained in `main.tf`'s `local.region_abbreviations` map. Adding a region is a
 ## Constraints and gotchas
 
 - **Storage account names are global.** Two accounts with the same name in different subscriptions collide. The convention reduces collision risk by including org/workload/env/region/instance, but does not eliminate it. Future enhancement: an optional `unique_suffix` flag that appends a 4-char hash of the subscription ID. Open a PR if you need it.
-- **Length limits truncate.** Storage accounts cap at 24 chars; if `org` + `workload` + `env` + `region` + `instance` exceeds this, the compact form silently truncates. The `convention_compliance` test asserts the cap; revisit if your inputs are long.
+- **Length limits hash, not truncate.** Storage accounts cap at 24 chars; if `org` + `workload` + `env` + `region` + `instance` exceeds the cap, the compact form keeps a deterministic hash of the full identity in the name instead of silently truncating (truncation caused collisions between long workloads that shared a prefix). The `convention_compliance` test asserts the cap and the hash behavior.
 - **Pure logic, no resources.** This module never calls a provider. `versions.tf` declares no `required_providers`. Plan and apply are fast and free.
 
 ## Why this module ships no `policy/` or `monitoring/`

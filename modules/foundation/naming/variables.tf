@@ -13,8 +13,10 @@ variable "workload" {
   description = "Workload alias matching a Backstage catalog component. 2-15 chars: lowercase alphanumeric or hyphens."
 
   validation {
-    condition     = can(regex("^[a-z0-9-]{2,15}$", var.workload))
-    error_message = "workload must be 2-15 chars: lowercase alphanumeric or hyphens."
+    # Hyphens only between alphanumerics: a leading/trailing/double hyphen
+    # produces names Azure rejects (e.g. 'kv-org-demo--dev-eus-01').
+    condition     = can(regex("^[a-z0-9](-?[a-z0-9])*$", var.workload)) && length(var.workload) >= 2 && length(var.workload) <= 15
+    error_message = "workload must be 2-15 chars: lowercase alphanumeric with single interior hyphens (no leading, trailing, or consecutive hyphens)."
   }
 }
 
