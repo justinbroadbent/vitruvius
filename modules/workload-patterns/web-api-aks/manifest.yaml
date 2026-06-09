@@ -68,6 +68,11 @@ spec:
       required: false
       description: "'DoNotEnforce' for the Audit phase (ADR 0008); 'Default' once promoted."
       vocabulary: [DoNotEnforce, Default]
+    - name: policy_effect
+      type: string
+      required: false
+      description: Initiative-wide effect for the purge-protection and RBAC members. Audit by default per ADR 0008; promote to Deny with evidence.
+      vocabulary: [Audit, Deny, Disabled]
 
   outputs:
     - name: workload_identity_client_id
@@ -114,7 +119,6 @@ spec:
       - keyvault-purge-protection-required
       - keyvault-rbac-authorization-required
       - keyvault-diagnostic-settings-required
-      - vitruvius-web-api-aks-keyvault
     monitoring: []
     runbooks: []
 

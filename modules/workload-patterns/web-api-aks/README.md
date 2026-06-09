@@ -104,15 +104,15 @@ If the app team gets any of those wrong, federation fails closed — the pod can
 
 ## What ships in `policy/`
 
-Three policies, bundled into the `vitruvius-web-api-aks-keyvault` initiative:
+Three policies, bundled into a per-workload `vitruvius-kv-hardening-<key-vault-name>` initiative. Names derive from the (globally unique) Key Vault name so two workloads in the same subscription cannot collide:
 
 | File | Effect | Purpose |
 |---|---|---|
-| `keyvault-purge-protection-required.json` | `Audit` (parameterized) | Reject KVs without purge protection. Catches drift even though azurerm v4 defaults purge protection on. |
+| `keyvault-purge-protection-required.json` | `Audit` (parameterized) | Reject KVs without purge protection. Catches drift even though the AVM module defaults purge protection on. |
 | `keyvault-rbac-authorization-required.json` | `Audit` (parameterized) | Reject KVs that use the legacy access-policy auth model. RBAC unifies KV access with the rest of Azure RBAC (PIM, conditional access). |
-| `keyvault-diagnostic-settings-required.json` | `AuditIfNotExists` (parameterized) | Detect KVs without a diagnostic setting. Per ADR 0005, audit logs must flow to the substrate. |
+| `keyvault-diagnostic-settings-required.json` | `AuditIfNotExists` (parameterized) | Detect KVs without a diagnostic setting routing to the platform LAW. Per ADR 0005, audit logs must flow to the substrate. |
 
-Per [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md), the initiative's effects start at `Audit` and the assignment defaults to `DoNotEnforce`. Promotion to `Deny` is a separate PR with audit-mode evidence.
+Per [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md), the initiative's effects start at `Audit` and the assignment defaults to `DoNotEnforce`. Promotion to `Deny` is a single assignment-time change: set `policy_effect = "Deny"` in a PR that cites audit-mode evidence.
 
 The `keyvault-diagnostic-settings-required` policy uses `AuditIfNotExists`, not `DeployIfNotExists`. Reason: this module's deployment is the source of the diagnostic setting. The policy detects drift; it does not heal. Healing-by-policy obscures who actually deployed what.
 

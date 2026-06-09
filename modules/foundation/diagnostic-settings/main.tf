@@ -123,3 +123,14 @@ resource "azurerm_management_group_policy_assignment" "this" {
     }
   })
 }
+
+# The member policies' roleDefinitionIds are granted automatically when an
+# assignment is created through the portal — but not by Terraform. Without
+# these grants every DeployIfNotExists remediation fails authorization.
+resource "azurerm_role_assignment" "remediation" {
+  for_each = local.deploy_assignment ? toset(["Log Analytics Contributor", "Monitoring Contributor"]) : toset([])
+
+  scope                = var.policy_assignment_scope
+  role_definition_name = each.value
+  principal_id         = azurerm_management_group_policy_assignment.this[0].identity[0].principal_id
+}

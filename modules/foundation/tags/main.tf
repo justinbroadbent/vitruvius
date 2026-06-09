@@ -39,6 +39,7 @@ locals {
     "allowed-values-data-classification"  = "allowed-values-data-classification.json"
     "allowed-values-business-criticality" = "allowed-values-business-criticality.json"
     "inherit-tag-from-resource-group"     = "inherit-tag-from-resource-group.json"
+    "require-tag-on-resource-group"       = "require-tag-on-resource-group.json"
   }
   policy_definitions = {
     for k, file in local.policy_files :
@@ -48,13 +49,19 @@ locals {
   # Required tags are inheritable from the resource group; optional tags are not.
   inheritable_tag_keys = ["owner", "env", "cost-center", "data-classification", "business-criticality"]
 
-  # Direct references: every definition except the parameterized inherit policy.
+  # The two parameterized definitions are instantiated once per required tag
+  # rather than referenced directly.
+  parameterized_definitions = ["inherit-tag-from-resource-group", "require-tag-on-resource-group"]
+
+  # Direct references: every non-parameterized definition, wired to the
+  # initiative-level effect parameter so the Audit→Deny promotion (ADR 0008)
+  # is a single assignment-time change, not a per-definition JSON edit.
   direct_references = [
     for k in sort(keys(local.policy_files)) : {
       reference_id     = k
       definition_key   = k
-      parameter_values = jsonencode({})
-    } if k != "inherit-tag-from-resource-group"
+      parameter_values = jsonencode({ effect = { value = "[parameters('effect')]" } })
+    } if !contains(local.parameterized_definitions, k)
   ]
 
   # Inherit references: one per inheritable required tag.
@@ -66,7 +73,21 @@ locals {
     }
   ]
 
-  initiative_references = concat(local.direct_references, local.inherit_references)
+  # Resource-group references: the require-tag-* policies run in Indexed mode,
+  # which excludes resource groups — but resource groups are the inherit
+  # policy's source, so the taxonomy is enforced there via a mode-All policy.
+  rg_required_references = [
+    for tag in local.inheritable_tag_keys : {
+      reference_id   = "require-on-rg-${tag}"
+      definition_key = "require-tag-on-resource-group"
+      parameter_values = jsonencode({
+        tagName = { value = tag }
+        effect  = { value = "[parameters('effect')]" }
+      })
+    }
+  ]
+
+  initiative_references = concat(local.direct_references, local.inherit_references, local.rg_required_references)
 }
 
 resource "azurerm_policy_definition" "this" {
@@ -90,6 +111,18 @@ resource "azurerm_management_group_policy_set_definition" "this" {
   display_name        = "Vitruvius — Tag Taxonomy (ADR 0010)"
   description         = "Bundles the required-tag, allowed-values, and inherit-from-resource-group policies that enforce the tag taxonomy in ADR 0010. Audit-before-Deny lifecycle per ADR 0008."
   management_group_id = var.policy_management_group_id
+
+  parameters = jsonencode({
+    effect = {
+      type = "String"
+      metadata = {
+        displayName = "Effect"
+        description = "Initiative-level effect; flows to every require/allowed-values member policy. The inherit members are modify-effect and unaffected."
+      }
+      allowedValues = ["Audit", "Deny", "Disabled"]
+      defaultValue  = var.policy_effect
+    }
+  })
 
   dynamic "policy_definition_reference" {
     for_each = local.initiative_references
@@ -115,4 +148,21 @@ resource "azurerm_management_group_policy_assignment" "this" {
   identity {
     type = "SystemAssigned"
   }
+
+  parameters = jsonencode({
+    effect = {
+      value = var.policy_effect
+    }
+  })
+}
+
+# The inherit policy's roleDefinitionIds are granted automatically when an
+# assignment is created through the portal — but not by Terraform. Without
+# this grant every modify-effect remediation fails authorization.
+resource "azurerm_role_assignment" "remediation" {
+  count = local.deploy_policy ? 1 : 0
+
+  scope                = var.policy_management_group_id
+  role_definition_name = "Tag Contributor"
+  principal_id         = azurerm_management_group_policy_assignment.this[0].identity[0].principal_id
 }

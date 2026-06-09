@@ -141,3 +141,14 @@ variable "policy_enforcement_mode" {
     error_message = "policy_enforcement_mode must be one of: Default, DoNotEnforce."
   }
 }
+
+variable "policy_effect" {
+  type        = string
+  default     = "Audit"
+  description = "Initiative-wide effect for the purge-protection and RBAC member policies. Defaults to Audit per ADR 0008. Promote to Deny once Audit-mode evidence supports it. The diagnostic-settings member is AuditIfNotExists and unaffected."
+
+  validation {
+    condition     = contains(["Audit", "Deny", "Disabled"], var.policy_effect)
+    error_message = "policy_effect must be one of: Audit, Deny, Disabled."
+  }
+}

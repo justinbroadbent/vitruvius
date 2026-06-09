@@ -11,7 +11,7 @@
       "effect": "[parameters('effect')]",
       "details": {
         "type": "Microsoft.Insights/diagnosticSettings",
-        "name": "vitruvius-substrate-routing",
+        "evaluationDelay": "AfterProvisioning",
         "existenceCondition": {
           "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
           "exists": "true"
