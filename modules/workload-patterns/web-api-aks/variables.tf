@@ -15,8 +15,9 @@ variable "key_vault_name" {
   description = "Name for the workload's Key Vault. Compute via foundation/naming and pass in. Subject to Azure's 3-24 char global-uniqueness constraints."
 
   validation {
-    condition     = can(regex("^kv-[a-z0-9-]{3,21}$", var.key_vault_name))
-    error_message = "key_vault_name must start with 'kv-' (foundation/naming convention) and respect Azure's 24-char limit."
+    # Azure KV rules: 3-24 chars, must end alphanumeric, no consecutive hyphens.
+    condition     = can(regex("^kv(-[a-z0-9]+)+$", var.key_vault_name)) && length(var.key_vault_name) <= 24
+    error_message = "key_vault_name must start with 'kv-' (foundation/naming convention), use single interior hyphens, end alphanumeric, and respect Azure's 24-char limit."
   }
 }
 
@@ -72,8 +73,9 @@ variable "aks_namespace" {
   description = "Kubernetes namespace where the workload's pods run. Used to build the federated credential subject."
 
   validation {
-    condition     = can(regex("^[a-z0-9-]{1,63}$", var.aks_namespace))
-    error_message = "aks_namespace must be a valid Kubernetes namespace (1-63 chars, lowercase alphanumeric or hyphens)."
+    # RFC 1123 label: start/end alphanumeric.
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", var.aks_namespace))
+    error_message = "aks_namespace must be a valid Kubernetes namespace (RFC 1123 label: 1-63 chars, lowercase alphanumeric or hyphens, starts and ends alphanumeric)."
   }
 }
 
@@ -82,8 +84,16 @@ variable "aks_service_account_name" {
   description = "Kubernetes ServiceAccount the workload's pods authenticate as. Used to build the federated credential subject. The app team is responsible for creating the ServiceAccount with the matching annotations."
 
   validation {
-    condition     = can(regex("^[a-z0-9-]{1,63}$", var.aks_service_account_name))
-    error_message = "aks_service_account_name must be a valid Kubernetes name (1-63 chars, lowercase alphanumeric or hyphens)."
+    condition     = can(regex("^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$", var.aks_service_account_name))
+    error_message = "aks_service_account_name must be a valid Kubernetes name (RFC 1123 label: 1-63 chars, lowercase alphanumeric or hyphens, starts and ends alphanumeric)."
+  }
+
+  validation {
+    # The federated identity credential is named fic-aks-<namespace>-<sa>;
+    # Azure caps credential names at 120 chars. Cross-variable validation
+    # requires Terraform 1.9+, which this module already floors at.
+    condition     = length("fic-aks-${var.aks_namespace}-${var.aks_service_account_name}") <= 120
+    error_message = "aks_namespace plus aks_service_account_name is too long: the federated credential name 'fic-aks-<namespace>-<service-account>' must be at most 120 characters."
   }
 }
 

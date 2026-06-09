@@ -90,6 +90,26 @@ locals {
   initiative_references = concat(local.direct_references, local.inherit_references, local.rg_required_references)
 }
 
+# The allowed-values policy JSONs and local.vocabularies encode the same
+# vocabulary in two places (ADR 0010 requires both: Terraform validates inputs,
+# Azure Policy validates the estate). This invariant fails any plan — including
+# every terraform test run — if the two drift.
+resource "terraform_data" "vocabulary_invariants" {
+  lifecycle {
+    precondition {
+      condition = alltrue([
+        for pair in [
+          { file = "env", key = "env" },
+          { file = "data-classification", key = "data_classification" },
+          { file = "business-criticality", key = "business_criticality" },
+        ] :
+        sort(jsondecode(file("${path.module}/policy/allowed-values-${pair.file}.json")).policyRule.if.allOf[1].notIn) == sort(local.vocabularies[pair.key])
+      ])
+      error_message = "The allowed-values-*.json vocabularies have drifted from local.vocabularies in main.tf. ADR 0010 requires the two stay identical — update both together."
+    }
+  }
+}
+
 resource "azurerm_policy_definition" "this" {
   for_each = { for k, v in local.policy_definitions : k => v if local.deploy_policy }
 

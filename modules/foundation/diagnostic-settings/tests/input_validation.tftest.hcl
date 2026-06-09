@@ -48,3 +48,24 @@ run "rejects_assignment_location_with_uppercase" {
 
   expect_failures = [var.policy_assignment_location]
 }
+
+run "rejects_bare_management_group_name" {
+  command = plan
+
+  variables {
+    policy_management_group_id = "platform-mg"
+    log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform/providers/Microsoft.OperationalInsights/workspaces/log-platform"
+  }
+
+  expect_failures = [var.policy_management_group_id]
+}
+
+run "rejects_law_id_missing_workspace_segment" {
+  command = plan
+
+  variables {
+    log_analytics_workspace_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-platform"
+  }
+
+  expect_failures = [var.log_analytics_workspace_id]
+}

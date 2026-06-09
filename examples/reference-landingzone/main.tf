@@ -84,4 +84,5 @@ module "diagnostic_settings" {
   policy_management_group_id = var.platform_management_group_id
   policy_assignment_scope    = var.platform_management_group_id
   log_analytics_workspace_id = module.observability_substrate.log_analytics_workspace_id
+  policy_assignment_location = var.location
 }
