@@ -82,9 +82,19 @@ function Get-Adrs {
     Get-ChildItem -Path $adrDir -File | Where-Object { $_.Name -match '^[0-9]{4}-.*\.md$' } | Sort-Object Name | ForEach-Object {
         $text = Get-Content -Raw -LiteralPath $_.FullName
         $meta = ConvertFrom-SimpleFrontmatter -Text $text
+        # Hard failures, not warnings: a silently-skipped ADR would vanish
+        # from the generated index while CI stays green.
         if ($null -eq $meta) {
-            Write-Warning "$($_.Name) has no frontmatter; skipping"
-            return
+            throw "$($_.Name): missing or malformed YAML frontmatter"
+        }
+        foreach ($required in @('id', 'title', 'status', 'date', 'categories')) {
+            if (-not $meta.Contains($required)) {
+                throw "$($_.Name): frontmatter is missing required key '$required'"
+            }
+        }
+        $prefix = [int]$_.Name.Substring(0, 4)
+        if ([int]$meta['id'] -ne $prefix) {
+            throw "$($_.Name): frontmatter id '$($meta['id'])' does not match filename prefix '$prefix'"
         }
         $meta['filename'] = $_.Name
         $adrs += , $meta
