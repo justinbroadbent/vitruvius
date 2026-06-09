@@ -76,11 +76,32 @@ locals {
     k => jsondecode(file("${path.module}/policy/${file}"))
   }
 
+  # Azure policy resource names are subscription-scoped, and one invocation of
+  # this module = one workload. Deriving names from the (globally unique) Key
+  # Vault name keeps a second workload in the same subscription from colliding.
+  # Short codes keep definition names inside Azure's 64-char limit.
+  policy_short_names = {
+    "keyvault-purge-protection-required"    = "kv-purge"
+    "keyvault-rbac-authorization-required"  = "kv-rbac"
+    "keyvault-diagnostic-settings-required" = "kv-diag"
+  }
+  initiative_name = "vitruvius-kv-hardening-${var.key_vault_name}"
+
+  # Member parameters wire to the initiative-level parameters so the
+  # Audit→Deny promotion (ADR 0008) is one assignment-time change.
+  initiative_parameter_values = {
+    "keyvault-purge-protection-required"   = jsonencode({ effect = { value = "[parameters('effect')]" } })
+    "keyvault-rbac-authorization-required" = jsonencode({ effect = { value = "[parameters('effect')]" } })
+    "keyvault-diagnostic-settings-required" = jsonencode({
+      logAnalyticsWorkspaceId = { value = "[parameters('logAnalyticsWorkspaceId')]" }
+    })
+  }
+
   initiative_references = [
     for k in sort(keys(local.policy_files)) : {
       reference_id     = k
       definition_key   = k
-      parameter_values = jsonencode({})
+      parameter_values = local.initiative_parameter_values[k]
     }
   ]
 
@@ -98,20 +119,40 @@ locals {
 resource "azurerm_policy_definition" "this" {
   for_each = local.policy_definitions
 
-  name         = "vitruvius-web-api-aks-${each.key}"
+  name         = "vitruvius-${local.policy_short_names[each.key]}-${var.key_vault_name}"
   policy_type  = "Custom"
   mode         = each.value.mode
-  display_name = each.value.displayName
+  display_name = "${each.value.displayName} (${var.key_vault_name})"
   description  = each.value.description
   policy_rule  = jsonencode(each.value.policyRule)
   parameters   = jsonencode(each.value.parameters)
 }
 
 resource "azurerm_policy_set_definition" "this" {
-  name         = "vitruvius-web-api-aks-keyvault"
+  name         = local.initiative_name
   policy_type  = "Custom"
-  display_name = "Vitruvius — web-api-aks Key Vault hardening"
+  display_name = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description  = "Bundles the Key Vault hardening policies that every web-api-aks workload's Key Vault must comply with: purge protection, RBAC authorization, and diagnostic settings to the platform LAW. Audit-before-Deny lifecycle per ADR 0008."
+
+  parameters = jsonencode({
+    effect = {
+      type = "String"
+      metadata = {
+        displayName = "Effect"
+        description = "Initiative-level effect; flows to the purge-protection and RBAC member policies. The diagnostic-settings member is AuditIfNotExists and unaffected."
+      }
+      allowedValues = ["Audit", "Deny", "Disabled"]
+      defaultValue  = var.policy_effect
+    }
+    logAnalyticsWorkspaceId = {
+      type = "String"
+      metadata = {
+        displayName = "Log Analytics Workspace ID"
+        description = "Resource ID of the platform LAW the vault's diagnostics must route to."
+      }
+      defaultValue = var.log_analytics_workspace_id
+    }
+  })
 
   dynamic "policy_definition_reference" {
     for_each = local.initiative_references
@@ -123,34 +164,37 @@ resource "azurerm_policy_set_definition" "this" {
   }
 }
 
+# No managed identity on either assignment: the initiative is Audit /
+# AuditIfNotExists only, and identities are required only for DeployIfNotExists
+# and Modify remediation.
 resource "azurerm_subscription_policy_assignment" "this" {
   count = local.assign_at_subscription ? 1 : 0
 
-  name                 = "vitruvius-web-api-aks-keyvault"
+  name                 = local.initiative_name
   subscription_id      = var.policy_assignment_scope
   policy_definition_id = azurerm_policy_set_definition.this.id
-  display_name         = "Vitruvius — web-api-aks Key Vault hardening"
+  display_name         = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
-  location             = var.location
 
-  identity {
-    type = "SystemAssigned"
-  }
+  parameters = jsonencode({
+    effect                  = { value = var.policy_effect }
+    logAnalyticsWorkspaceId = { value = var.log_analytics_workspace_id }
+  })
 }
 
 resource "azurerm_resource_group_policy_assignment" "this" {
   count = local.assign_at_resource_group ? 1 : 0
 
-  name                 = "vitruvius-web-api-aks-keyvault"
+  name                 = local.initiative_name
   resource_group_id    = var.policy_assignment_scope
   policy_definition_id = azurerm_policy_set_definition.this.id
-  display_name         = "Vitruvius — web-api-aks Key Vault hardening"
+  display_name         = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
-  location             = var.location
 
-  identity {
-    type = "SystemAssigned"
-  }
+  parameters = jsonencode({
+    effect                  = { value = var.policy_effect }
+    logAnalyticsWorkspaceId = { value = var.log_analytics_workspace_id }
+  })
 }

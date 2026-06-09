@@ -87,6 +87,17 @@ variable "policy_management_group_id" {
   description = "Management group resource ID where the tag policy definitions, initiative, and assignment are deployed. When null, the module produces only the tag map and ships no policy resources. Per ADR 0008, the assignment is created in Audit enforcement mode by default."
 }
 
+variable "policy_effect" {
+  type        = string
+  default     = "Audit"
+  description = "Initiative-wide effect for the require-tag and allowed-values member policies. Defaults to Audit per ADR 0008. Promote to Deny once Audit-mode evidence supports it. The inherit members are modify-effect and unaffected."
+
+  validation {
+    condition     = contains(["Audit", "Deny", "Disabled"], var.policy_effect)
+    error_message = "policy_effect must be one of: Audit, Deny, Disabled."
+  }
+}
+
 variable "policy_enforcement_mode" {
   type        = string
   default     = "DoNotEnforce"

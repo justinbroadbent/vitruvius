@@ -1,6 +1,6 @@
 {
   "displayName": "Key Vault must have purge protection enabled",
-  "description": "Soft-delete alone is reversible by anyone with delete permissions. Purge protection prevents permanent deletion within the soft-delete window. Required by audit; default behavior in azurerm v4+, but explicit enforcement catches drift.",
+  "description": "Soft-delete alone is reversible by anyone with delete permissions. Purge protection prevents permanent deletion within the soft-delete window. Required by audit; the AVM Key Vault module enables it by default, but explicit enforcement catches drift and hand-built vaults.",
   "mode": "Indexed",
   "policyRule": {
     "if": {

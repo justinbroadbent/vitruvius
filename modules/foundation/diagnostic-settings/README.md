@@ -60,6 +60,8 @@ Per [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.m
 
 This module does not auto-promote. The audit-and-evidence step is human review.
 
+When the initiative is assigned, the module also grants the assignment's managed identity **Log Analytics Contributor** and **Monitoring Contributor** at the assignment scope — Azure grants the policies' `roleDefinitionIds` automatically only for portal-created assignments, so without these the `DeployIfNotExists` remediation would fail authorization after promotion.
+
 ## Why DeployIfNotExists here, not in workload patterns
 
 A reasonable question: if the workload pattern (`web-api-aks`) for Key Vault uses `AuditIfNotExists` for its KV diagnostic-setting policy, why does this module's KV policy support `DeployIfNotExists`?

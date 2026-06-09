@@ -54,6 +54,11 @@ spec:
       type: string
       required: false
       description: Management group ID for policy deployment. When null, only the tag map is produced.
+    - name: policy_effect
+      type: string
+      required: false
+      description: Initiative-wide effect for the require/allowed-values members. Audit by default per ADR 0008; promote to Deny with evidence.
+      vocabulary: [Audit, Deny, Disabled]
     - name: policy_enforcement_mode
       type: string
       required: false
@@ -107,6 +112,7 @@ spec:
       - allowed-values-data-classification
       - allowed-values-business-criticality
       - inherit-tag-from-resource-group
+      - require-tag-on-resource-group
       - vitruvius-tag-taxonomy
     monitoring: []
     runbooks: []

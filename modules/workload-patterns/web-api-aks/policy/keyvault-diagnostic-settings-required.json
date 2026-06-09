@@ -1,6 +1,6 @@
 {
-  "displayName": "Key Vault must have diagnostic settings to a Log Analytics workspace",
-  "description": "Audit logs (key access, secret access, vault administration) must flow to the platform's Log Analytics workspace per ADR 0005. AuditIfNotExists effect: detects vaults without the required diagnostic-setting child resource.",
+  "displayName": "Key Vault must have diagnostic settings to the platform Log Analytics workspace",
+  "description": "Audit logs (key access, secret access, vault administration) must flow to the platform's Log Analytics workspace per ADR 0005. AuditIfNotExists effect: detects vaults without a diagnostic setting routing to the platform workspace. A setting routed anywhere else does not satisfy the policy.",
   "mode": "Indexed",
   "policyRule": {
     "if": {
@@ -11,12 +11,10 @@
       "effect": "[parameters('effect')]",
       "details": {
         "type": "Microsoft.Insights/diagnosticSettings",
+        "evaluationDelay": "AfterProvisioning",
         "existenceCondition": {
-          "anyOf": [
-            { "field": "Microsoft.Insights/diagnosticSettings/workspaceId", "exists": "true" },
-            { "field": "Microsoft.Insights/diagnosticSettings/storageAccountId", "exists": "true" },
-            { "field": "Microsoft.Insights/diagnosticSettings/eventHubAuthorizationRuleId", "exists": "true" }
-          ]
+          "field": "Microsoft.Insights/diagnosticSettings/workspaceId",
+          "equals": "[parameters('logAnalyticsWorkspaceId')]"
         }
       }
     }
@@ -30,6 +28,13 @@
       },
       "allowedValues": ["AuditIfNotExists", "Disabled"],
       "defaultValue": "AuditIfNotExists"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Log Analytics Workspace ID",
+        "description": "Resource ID of the platform LAW that must receive the vault's diagnostic logs."
+      }
     }
   }
 }

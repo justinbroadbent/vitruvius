@@ -27,6 +27,7 @@ The tag map is always produced; policy is opt-in. This keeps consumers free to i
 | `lifecycle_stage` | string | no | One of `stable`, `experimental`, `deprecated`. Emitted as the `lifecycle` tag key. |
 | `policy_management_group_id` | string | no | When supplied, the policy initiative and assignment are created at this MG. When null, the module produces only the tag map. |
 | `policy_enforcement_mode` | string | no | `DoNotEnforce` (default; Audit-mode per ADR 0008) or `Default` after promotion. |
+| `policy_effect` | string | no | `Audit` (default), `Deny`, or `Disabled`. Flows through the initiative's `effect` parameter to every require/allowed-values member. |
 | `policy_assignment_location` | string | no | Region for the assignment's managed identity. Defaults to `eastus`. Required by Azure because the inherit-tag policy uses the `modify` effect. |
 
 The Terraform variable name `lifecycle_stage` exists because `lifecycle` shadows the Terraform meta-argument keyword. The emitted *tag key* is `lifecycle`, matching ADR 0010.
@@ -68,7 +69,7 @@ Workload-pattern modules accept a `tags` input rather than re-instantiating this
 
 ## What this module ships in `policy/`
 
-Nine policy definitions, bundled into one initiative:
+Ten policy definitions, bundled into one initiative:
 
 | File | Effect | Purpose |
 |---|---|---|
@@ -80,9 +81,12 @@ Nine policy definitions, bundled into one initiative:
 | `allowed-values-env.json` | `Audit` (parameterized) | Reject `env` values outside the vocabulary. |
 | `allowed-values-data-classification.json` | `Audit` (parameterized) | Reject `data-classification` values outside the vocabulary. |
 | `allowed-values-business-criticality.json` | `Audit` (parameterized) | Reject `business-criticality` values outside the vocabulary. |
-| `inherit-tag-from-resource-group.json` | `modify` | Auto-inherit a tag from the RG when missing on the resource. Instantiated 5 times in the initiative — once per required tag. |
+| `inherit-tag-from-resource-group.json` | `modify` | Auto-inherit a tag from the RG when missing on the resource. Instantiated 5 times in the initiative — once per required tag. Remediates with Tag Contributor, the least-privilege role for tag writes. |
+| `require-tag-on-resource-group.json` | `Audit` (parameterized) | Require each of the five tags on resource groups themselves (mode `All`; the `require-tag-*` policies run `Indexed`, which excludes RGs — and RGs are the inherit policy's source). Instantiated 5 times. |
 
-The five `require-tag-*` and three `allowed-values-*` policies expose an `effect` parameter (`Audit` / `Deny` / `Disabled`, default `Audit`). Per [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md), promotion to `Deny` is a separate PR with Audit-mode evidence — not a flag flip in this module.
+The require and allowed-values members all wire to a single initiative-level `effect` parameter (`Audit` / `Deny` / `Disabled`), exposed as the module's `policy_effect` input. Per [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md), promotion to `Deny` is a separate PR with Audit-mode evidence — set `policy_effect = "Deny"`, citing the evidence.
+
+When the initiative is assigned, the module also grants the assignment's managed identity **Tag Contributor** at the management group — Azure grants the policy's `roleDefinitionIds` automatically only for portal-created assignments, so without this the inherit policy's remediation would fail authorization.
 
 ## Audit-before-Deny lifecycle
 
@@ -90,7 +94,7 @@ The assignment is created with `enforce = false` (`DoNotEnforce` mode) by defaul
 
 1. Run the assignment for 30–90 days.
 2. Pull Audit-mode telemetry from the observability substrate ([ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md)) to count would-be denials, identify owners, and confirm no false positives.
-3. PR to promote: set `policy_enforcement_mode = "Default"` and (separately, at the assignment scope or via parameters) flip the `effect` parameters from `Audit` to `Deny`.
+3. PR to promote: set `policy_enforcement_mode = "Default"` and `policy_effect = "Deny"`.
 
 This module does not auto-promote. The audit-and-evidence step is the point.
 

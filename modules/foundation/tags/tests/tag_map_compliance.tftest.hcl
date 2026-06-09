@@ -154,8 +154,14 @@ run "policy_deployed_when_mg_id_supplied" {
   }
 
   assert {
-    condition     = length(output.policy_definition_ids) == 9
-    error_message = "policy_definition_ids must contain all 9 definitions when policy is deployed"
+    condition     = length(output.policy_definition_ids) == 10
+    error_message = "policy_definition_ids must contain all 10 definitions when policy is deployed"
+  }
+
+  # 8 direct + 5 inherit instantiations + 5 require-on-rg instantiations.
+  assert {
+    condition     = length(azurerm_management_group_policy_set_definition.this[0].policy_definition_reference) == 18
+    error_message = "initiative must carry 8 direct references plus the two 5-way per-tag fan-outs (inherit, require-on-rg)"
   }
 
   assert {

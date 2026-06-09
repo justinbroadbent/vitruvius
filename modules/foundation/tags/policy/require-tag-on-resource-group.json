@@ -1,0 +1,34 @@
+{
+  "displayName": "Require tag on resource groups",
+  "description": "Validates that the named tag is present on every resource group. The require-tag-* policies run in Indexed mode, which excludes resource groups — but resource groups are the source the inherit-tag policy copies from, so the taxonomy must be enforced there too. The tag name is parameterized so the initiative can instantiate this policy once per required tag.",
+  "mode": "All",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "type", "equals": "Microsoft.Resources/subscriptions/resourceGroups" },
+        { "field": "[concat('tags[', parameters('tagName'), ']')]", "exists": "false" }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "tagName": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Tag Name",
+        "description": "Name of the required tag."
+      }
+    },
+    "effect": {
+      "type": "String",
+      "metadata": {
+        "displayName": "Effect",
+        "description": "Audit, Deny, or Disabled. Defaults to Audit per ADR 0008."
+      },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}
