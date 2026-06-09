@@ -7,7 +7,7 @@ categories: [observability]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: []
-cites_adrs: []
+cites_adrs: [ADR-0005]
 ---
 
 # ADR 0002 — Observability is OpenTelemetry-first, emission target is configuration

@@ -111,7 +111,7 @@ function Format-AdrIndex {
     $lines.Add('')
     $lines.Add('# Architecture Decision Records (ADRs)')
     $lines.Add('')
-    $lines.Add('Index of ADRs in this repo, grouped by category. Each ADR is a single decision with its context, consequences, and citations. ADRs are kept flat and numbered sequentially; this index is the navigational view.')
+    $lines.Add('Index of ADRs in this repo, grouped by category. Each ADR is a single decision with its context, consequences, and citations. ADRs are kept flat and numbered monotonically — not densely: a missing number is a decision slot reserved by an open RFC issue that has not merged yet, not a deleted record. This index is the navigational view.')
     $lines.Add('')
 
     $lines.Add('## All ADRs (chronological)')

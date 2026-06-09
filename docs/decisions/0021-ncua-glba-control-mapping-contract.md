@@ -6,7 +6,7 @@ date: 2026-06-08
 categories: [security, governance, compliance]
 supersedes: []
 superseded_by: []
-cites_anti_patterns: [AP-009, AP-005]
+cites_anti_patterns: [AP-009, AP-005, AP-012]
 cites_adrs: [ADR-0003, ADR-0005, ADR-0008, ADR-0011, ADR-0016]
 ---
 
@@ -16,7 +16,7 @@ cites_adrs: [ADR-0003, ADR-0005, ADR-0008, ADR-0011, ADR-0016]
 
 [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) sets how every policy behaves — grouped into initiatives, audit-before-deny, tiered enforcement, exemptions as first-class — and says an initiative "documents the controls it maps to — NIST CSF subcategory, GLBA Safeguards Rule section, internal risk register entry." That mapping is prose: no field carries it and nothing checks it.
 
-A credit union's NCUA examination and its GLBA Safeguards Rule (16 CFR 314) obligations turn on a **control map** — for each control in scope, what implements it and what evidence proves it operates. The forces:
+A credit union's NCUA examination and its GLBA §501(b) safeguards obligations turn on a **control map** — for each control in scope, what implements it and what evidence proves it operates. (Which regulation implements GLBA for the adopter is itself a compliance-partner determination: for federally insured credit unions NCUA implements it via **12 CFR Part 748, Appendices A & B**; the FTC's Safeguards Rule, 16 CFR 314, applies to non-bank financial institutions. The framework-qualified identifiers below make the regime a content choice, not a schema choice.) The forces:
 
 - **Auditors need a control map with evidence.** A list of policies is not a control map; a control map is keyed by *control*, says what is automated vs. manual vs. open, and links to evidence.
 - **The map must not rot.** A control map kept as a spreadsheet or wiki drifts from the policies it describes, and the drift is invisible until an exam finds it ([AP-009](../anti-patterns.md#ap-009--doc-rot)).
@@ -28,9 +28,9 @@ This ADR fixes the **control-mapping contract** — where a mapping is declared,
 
 ### 1. Control mappings are declared as structured data, per initiative
 
-Every policy initiative declares the controls it provides evidence for, as a machine-readable list of framework-qualified control identifiers — e.g. NIST CSF `PR.AC-1`, GLBA Safeguards `314.4(c)(1)`, or an internal risk-register ID. This sits alongside the plain-English *intent* ADR 0008 §1 requires. It extends the structured-contract principle of [ADR 0011](./0011-module-manifest.md): the manifest is where a module's structured facts live.
+Every policy initiative declares the controls it provides evidence for, as a machine-readable list of framework-qualified control identifiers — e.g. NIST CSF `PR.AC-1`, NCUA `748-app-a.II`, or an internal risk-register ID. This sits alongside the plain-English *intent* ADR 0008 §1 requires. It extends the structured-contract principle of [ADR 0011](./0011-module-manifest.md): the manifest is where a module's structured facts live.
 
-The identifier is **framework-qualified** (`csf:PR.AC-1`, `glba:314.4(c)(1)`), so the contract is framework-agnostic and an adopter can key on CSF 1.1, CSF 2.0, a Safeguards revision, or an internal framework without a schema change.
+The identifier is **framework-qualified** (`csf:PR.AC-1`, `ncua:748-app-a.II`, `glba:314.4(c)(1)` for an FTC-regulated adopter), so the contract is framework-agnostic and an adopter can key on CSF 1.1, CSF 2.0, the applicable GLBA-implementing regulation, or an internal framework without a schema change.
 
 ### 2. The control map is derived, never hand-maintained
 
@@ -56,7 +56,8 @@ Control-mapped policies still go audit-before-deny, still run tiered (sandbox/de
 
 ## What this does not decide
 
-- **The actual control catalog** — which NIST CSF subcategories and GLBA Safeguards sections are in scope, and which Azure Policy implements each, is the security/compliance-partner conversation the `ncua-glba` README flags as the blocker.
+- **The actual control catalog** — which NIST CSF subcategories and safeguards sections are in scope, and which Azure Policy implements each, is the security/compliance-partner conversation the `ncua-glba` README flags as the blocker. That conversation also confirms the applicable GLBA regime (NCUA 12 CFR 748 vs. FTC 16 CFR 314 — see Context).
+- **The map generator and its CI drift check** — §2 specifies that the map is derived and drift-checked; building the generator and wiring the check are follow-up work, not yet live.
 - **The exact schema/manifest field** that carries the mappings — the shape is named here; the JSON Schema change to `module-manifest.schema.json` (and any `ncua-glba` initiative-metadata format) is a follow-up.
 - **The evidence-pack generator and the auditor artifact format** — deferred, concept-first.
 - **Whether a given policy satisfies a control to an examiner's standard** — that is the compliance partner's and the auditor's call, not a platform-team assertion. The contract records the *claim*; acceptance is external.

@@ -14,7 +14,7 @@ Workload patterns — opinionated module shapes for common application archetype
 - `data-pipeline/` — managed batch / streaming workloads (Data Factory, Synapse, or Databricks). Different cross-cutting concerns (data-classification-driven CMK, lineage tracking).
 - `apim-bff/` — APIM as a backend-for-frontend / cross-network mediation pattern, including the cross-cloud SaaS-core integration shape.
 
-Each new pattern follows the same shape as `web-api-aks`: `manifest.yaml`, `policy/`, `monitoring/`, examples, tests, and AGENTS.md guidance documenting the cross-cutting choices and what the app-team owns.
+Each new pattern follows the same shape as `web-api-aks`: `manifest.yaml`, policy and monitoring artifacts per [ADR 0003](../../docs/decisions/0003-modules-ship-policy-and-monitoring.md), examples, tests, and AGENTS.md guidance documenting the cross-cutting choices and what the app-team owns.
 
 ## Workload patterns multiply slowly
 

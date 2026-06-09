@@ -7,7 +7,7 @@ categories: [networking, integration]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-003, AP-009]
-cites_adrs: [ADR-0005, ADR-0007]
+cites_adrs: [ADR-0005, ADR-0007, ADR-0012]
 ---
 
 # ADR 0006 — Service discovery as three concerns with three tools
@@ -95,4 +95,4 @@ The three concerns also have three different reversibility profiles — which is
 - [AP-003](../anti-patterns.md#ap-003--hard-coded-service-endpoints) — what this ADR prevents.
 - [AP-009](../anti-patterns.md#ap-009--doc-rot) — context for keeping inventory in Backstage with TechDocs pulled from repo.
 - [ADR 0005](./0005-observability-substrate-and-signal-parity.md) — APIM emits to the substrate.
-- [ADR 0007](./0007-change-as-code.md) — manages the deviation case where a service is *not* in APIM.
+- [ADR 0012](./0012-collaborative-design.md) and the deviation workflow in [docs/golden-paths.md](../golden-paths.md) — govern the deviation case where a service is *not* in APIM.

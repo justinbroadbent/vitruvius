@@ -7,7 +7,7 @@ categories: [observability, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-002]
-cites_adrs: [ADR-0005, ADR-0013]
+cites_adrs: [ADR-0005, ADR-0011, ADR-0013]
 ---
 
 # ADR 0014 — SLOs are a per-workload discipline; the platform provides the framework, not the targets

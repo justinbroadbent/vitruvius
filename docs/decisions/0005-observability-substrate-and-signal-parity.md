@@ -7,7 +7,7 @@ categories: [observability]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-001, AP-002, AP-011]
-cites_adrs: [ADR-0002, ADR-0003]
+cites_adrs: [ADR-0002, ADR-0003, ADR-0013]
 ---
 
 # ADR 0005 — Centralized observability substrate with federated curation; signal parity across environments

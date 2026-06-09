@@ -51,7 +51,7 @@ If you've watched something fail and the failure mode isn't already in [`docs/an
 If your workload doesn't fit a golden path, you don't have to fight us — you have to document the deviation. See [`docs/golden-paths.md`](docs/golden-paths.md) for the contract.
 
 1. Open a PR adding an ADR explaining the deviation.
-2. Identify the cross-cutting concerns you're taking ownership of (all of them — identity, observability, secrets, networking, naming, tagging, deployment ledger).
+2. Identify the cross-cutting concerns you're taking ownership of (all six — identity, observability, secrets, networking, naming, tagging; see `docs/golden-paths.md` for the canonical list).
 3. Show evidence that your reimplementation meets the same audit and operational bar as the pattern's defaults.
 4. Reviewers from the platform team and the security team sign off; the deviation is the workload team's ongoing responsibility.
 
@@ -70,7 +70,7 @@ DM-only design conversations are an anti-pattern (AP-012). If a discussion start
 
 ## Code style and conventions
 
-- **Terraform.** `terraform fmt` and `tflint`. CI enforces both. AVM modules are the primitive layer (per [ADR 0001](docs/decisions/0001-iac-terraform-with-avm.md)); do not reimplement what AVM already wraps.
+- **Terraform.** `terraform fmt` — CI enforces it. `tflint` is recommended locally but is not yet a CI gate (see `docs/principles.md` § How these are enforced). AVM modules are the primitive layer (per [ADR 0001](docs/decisions/0001-iac-terraform-with-avm.md)); do not reimplement what AVM already wraps.
 - **YAML manifests.** Two-space indent. JSON Schema validates structure. CI runs the schema against every `manifest.yaml`.
 - **Markdown.** GitHub-flavored. One sentence per line is acceptable but not required.
 - **Commit messages.** Imperative mood, present tense. First line ≤ 72 chars. Body explains *why*, not *what*.

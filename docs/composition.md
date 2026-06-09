@@ -26,11 +26,11 @@ Hub, spoke, private-endpoint patterns, DNS zones, firewall posture. Aligned with
 
 ### 3. `platform-services/`
 
-Shared services that workloads consume but do not own — the OpenTelemetry collector deployment, the central Log Analytics workspace, Key Vault patterns, the workload identity baseline, the container registry.
+Shared services that workloads consume but do not own — the OpenTelemetry collector deployment, the central Log Analytics workspace, Key Vault patterns, the container registry. (The workload identity baseline lives in `foundation/identity`, not here.)
 
 ### 4. `workload-patterns/`
 
-Opinionated stacks for application shapes the platform team supports — `web-api-aks`, `function-event-driven`, `data-pipeline`, `apim-bff`. A workload pattern is the largest unit of opinion this repo offers; if a team needs something a pattern does not provide, they fork the pattern's example into their own root rather than parameterizing the pattern into a Swiss-army knife.
+Opinionated stacks for application shapes the platform team supports — `web-api-aks` today; `function-event-driven`, `data-pipeline`, and `apim-bff` are planned. A workload pattern is the largest unit of opinion this repo offers; if a team needs something a pattern does not provide, they fork the pattern's example into their own root rather than parameterizing the pattern into a Swiss-army knife.
 
 ## Layering, not lock-step
 

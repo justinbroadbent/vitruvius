@@ -7,7 +7,7 @@ categories: [foundation, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-001]
-cites_adrs: []
+cites_adrs: [ADR-0005, ADR-0011]
 ---
 
 # ADR 0003 — Modules ship their own policy and monitoring
@@ -24,10 +24,12 @@ This produces a long tail of resources without diagnostic settings, alerts that 
 
 ## Decision
 
-**A module ships with the policy assignments and the monitoring artifacts that govern the resources it produces.** Concretely, every module's directory contains:
+**A module ships with the policy assignments and the monitoring artifacts that govern the resources it produces.** Concretely:
 
-- `policy/` — Azure Policy assignments (or initiatives) targeting the module's outputs. If the module produces no auditable resources (e.g., a pure-logic naming module), the README states this explicitly.
-- `monitoring/` — alert rules, workbook JSON, dashboard JSON. Diagnostic settings are wired in `main.tf` and emit to a Log Analytics workspace passed in as an input.
+- **Policy** — Azure Policy definitions ship as JSON in `policy/`; the initiative and assignment that wire them up are Terraform resources in `main.tf`. If the module produces no auditable resources (e.g., a pure-logic naming module), the README states this explicitly.
+- **Monitoring** — alert rules may be defined inline in `main.tf` as Terraform resources (the common case for a handful of alerts); workbook and dashboard JSON live in `monitoring/`. Diagnostic settings are wired in `main.tf` and emit to a Log Analytics workspace passed in as an input.
+- Either way, the module's `manifest.yaml` names everything it ships in `spec.ships`, and CI checks each name resolves to a file in `policy/`/`monitoring/` or to a resource defined in `main.tf` (ADR 0011).
+- An experimental module may ship no monitoring yet — but its README must say so explicitly rather than leaving the gap implied.
 
 Operating expectations:
 

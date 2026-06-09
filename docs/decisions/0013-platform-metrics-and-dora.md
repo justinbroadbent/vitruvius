@@ -7,7 +7,7 @@ categories: [observability, change-management, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-007]
-cites_adrs: [ADR-0005, ADR-0007]
+cites_adrs: [ADR-0005, ADR-0007, ADR-0010]
 ---
 
 # ADR 0013 — Platform health is measured; DORA is the starting frame

@@ -29,7 +29,7 @@ A chat interface over `/docs`, ADRs, anti-patterns, and module manifests answers
 
 - *"What's our policy on storing member data?"*
 - *"Show me anti-patterns relevant to this PR."*
-- *"Which ADRs are still in `experimental` status?"*
+- *"Which modules are still in `experimental` status?"*
 - *"Has anyone already deviated from the AKS pattern?"*
 
 For stakeholders, new engineers, and architects checking their own intent. It is **not** a path-of-action (does not change anything); it is a path-of-knowledge.
@@ -38,11 +38,11 @@ See [`concepts/ai-chat-corpus/`](../concepts/ai-chat-corpus/) for the concrete d
 
 ### 3. CI-time pattern matching
 
-GitHub Actions invoke an LLM at PR time to:
+*Planned — no such workflow is wired yet (see `docs/principles.md` § How these are enforced).* The intended shape: CI invokes an LLM at PR time to
 
-- Match proposed changes against the anti-pattern catalog and surface relevant entries in PR comments.
-- Suggest which ADRs are most relevant to a given change.
-- Flag manifest-vs-code drift the schema validator can't easily express.
+- match proposed changes against the anti-pattern catalog and surface relevant entries in PR comments,
+- suggest which ADRs are most relevant to a given change, and
+- flag manifest-vs-code drift the schema validator can't easily express.
 
 Outputs are advisory, attached to the PR for the human reviewer. They do not auto-block or auto-approve.
 
@@ -54,7 +54,7 @@ New engineers ask the chat interface their questions instead of waiting for a se
 
 ### 1. Auto-merge / auto-approve
 
-Ever. Pull requests merge through human review. No exceptions for *"the LLM said it looked fine."*
+No pull request merges on the strength of an LLM review — ever. *"The LLM said it looked fine"* is not an approval. (Human-defined standard-change auto-merge — narrow, pre-approved change patterns that merge once deterministic CI passes, per [ADR 0007](decisions/0007-change-as-code.md) — is a separate mechanism and is unaffected: its gate is CI plus a human-authored allowlist, not a model's judgment.)
 
 ### 2. Production change execution
 

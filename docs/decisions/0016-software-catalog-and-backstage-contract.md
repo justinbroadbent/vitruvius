@@ -83,7 +83,7 @@ The `System` entities (one per area) and the single `Domain` entity are **not** 
 
 ### 4. Generation is a pure repo artifact
 
-A converter in `scripts/` (Go, per the team's language preference) reads every `manifest.yaml` and emits the corresponding `catalog-info.yaml`. It is deterministic and runs in CI; a drift check fails the build when a committed `catalog-info.yaml` does not match what the manifests produce.
+A small generator in `scripts/` (same minimal-dependency posture as the existing repo automation) reads every `manifest.yaml` and emits the corresponding `catalog-info.yaml`. It is deterministic and runs in CI; a drift check fails the build when a committed `catalog-info.yaml` does not match what the manifests produce.
 
 ### 5. The Backstage **deployment** is deferred behind explicit triggers
 

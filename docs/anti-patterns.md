@@ -4,6 +4,8 @@ The failure modes this repo's design is built to prevent. Each entry names the p
 
 These are not theoretical. They are patterns experienced engineers have watched fail across estates, vendors, and teams. The repo's discipline is the sum of avoiding each of them deliberately.
 
+A note on tense: each "What we do instead" states the *designed posture* — the approach the cited ADRs commit to. Some of its machinery (the OTel collector, scheduled drift detection, performance-budget gates, PIM back-fill automation) is decided but not yet built. [`docs/principles.md`](principles.md) § "How these are enforced" tracks which automated gates are live today; do not cite an entry here as evidence that a control is operating.
+
 ---
 
 ## AP-001 — Bolted-on monitoring
@@ -14,7 +16,7 @@ These are not theoretical. They are patterns experienced engineers have watched 
 
 **What it costs.** Long mean time to detection. Alert fatigue once the monitoring team finally adds alerts. Audit findings for unobserved resources. A learned helplessness where engineers stop trusting the monitoring stack.
 
-**What we do instead.** Modules ship their own diagnostic settings, alerts, workbooks, and dashboards in `monitoring/` alongside the Terraform that produces the resources they describe. There is no separate monitoring team authoring per-resource artifacts.
+**What we do instead.** Modules ship their own diagnostic settings, alerts, workbooks, and dashboards alongside the Terraform that produces the resources they describe — alerts as inline Terraform, workbook/dashboard JSON in `monitoring/`, all named in the manifest (ADR 0003). There is no separate monitoring team authoring per-resource artifacts.
 
 **Cited by:** ADR 0003, ADR 0005, `AGENTS.md` Hard Rule 1.
 
@@ -140,7 +142,7 @@ These are not theoretical. They are patterns experienced engineers have watched 
 
 **What it costs.** Security gaps. Integration cost paid every time. Talent attrition because experienced engineers don't want to debug yet another team's bespoke retry-with-jitter implementation.
 
-**What we do instead.** Workload-pattern modules are golden paths, not gold cages. Use the pattern → get all cross-cutting concerns (identity, observability, secrets, networking, naming, tagging, deployment ledger) for free. Deviate from the pattern → you own the cross-cutting yourself plus an ADR documenting why. The well-paved road is so much easier than the alternative that almost no one deviates.
+**What we do instead.** Workload-pattern modules are golden paths, not gold cages. Use the pattern → get all six cross-cutting concerns (identity, observability, secrets, networking, naming, tagging — the canonical list in `docs/golden-paths.md`) for free. Deviate from the pattern → you own the cross-cutting yourself plus an ADR documenting why. The well-paved road is so much easier than the alternative that almost no one deviates.
 
 **Cited by:** `docs/golden-paths.md`, ADR 0012.
 

@@ -36,11 +36,11 @@ A module that fails any of the three is not done.
 
 ## Hard rules
 
-1. **Modules ship their own observability and policy.** Diagnostic settings, alerts, dashboards, and Azure Policy assignments live with the module that produces the resources they govern. Do not create a separate "monitoring" or "policy" top-level concern that bolts onto modules later.
+1. **Modules ship their own observability and policy.** Diagnostic settings, alerts, dashboards, and Azure Policy assignments live with the module that produces the resources they govern. Alerts may be inline Terraform resources in `main.tf`; workbook/dashboard JSON lives in `monitoring/`; either way the manifest's `ships` section names them (ADR 0003, ADR 0011). Do not create a separate "monitoring" or "policy" top-level concern that bolts onto modules later.
 2. **Composition is by output data, not by inheritance or shared state.** A consumer reads Module A's outputs and passes them as Module B's inputs. Modules do not import each other. There is no mid-tier orchestrator module whose only job is to wire others together.
 3. **OpenTelemetry is the collection format. The emission target is an input.** Default to Azure Monitor / Application Insights; allow Datadog or any OTLP-compatible endpoint via per-environment configuration.
 4. **AVM first.** If [Azure Verified Modules](https://azure.github.io/Azure-Verified-Modules/) already wraps a resource, depend on it — pin the version. Do not re-implement primitives.
-5. **No PCI scope** in this repo. NCUA + GLBA control mappings only. Do not invent control text; cite NIST CSF subcategories or specific GLBA Safeguards Rule sections you are mapping to.
+5. **No PCI scope** in this repo. NCUA + GLBA control mappings only. Do not invent control text; cite NIST CSF subcategories or the GLBA-implementing regulation the compliance partners designate (for federally insured credit unions that is NCUA 12 CFR Part 748, not the FTC Safeguards Rule — see ADR 0021).
 6. **No vendor lock-in beyond Azure.** Examples that integrate with SaaS providers on other clouds describe the *pattern*. Do not check in a vendor's proprietary contract or SDK.
 7. **Avoid the term "blueprint"** in artifact-facing content. Azure Blueprints (the product) is deprecated; we use "module," "pattern," or "platform component."
 8. **Docs live with code.** Module docs (`README.md`, `AGENTS.md`) are in the module directory. ADRs live in `docs/decisions/`. Runbooks ship with the `monitoring/` bundle of the module that pages people. If a doc lives in a wiki and the code lives in git, the wiki is wrong on a long enough timeline ([AP-009](docs/anti-patterns.md#ap-009--doc-rot)). Treat repo content as authoritative; surface it in Backstage TechDocs by *pulling* from the repo, not by forking.
@@ -58,8 +58,8 @@ Layout under `modules/<area>/<name>/`:
   variables.tf
   outputs.tf
   versions.tf          # required_providers + required_version pin
-  policy/              # Azure Policy assignments shipped with this module
-  monitoring/          # alerts, workbook, dashboard JSON
+  policy/              # Azure Policy definition JSON shipped with this module
+  monitoring/          # workbook/dashboard JSON (inline alerts live in main.tf)
   examples/
     minimal/           # smallest sane invocation
     full/              # exercises the optional inputs

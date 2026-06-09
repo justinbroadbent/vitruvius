@@ -7,7 +7,7 @@ categories: [foundation, infrastructure, security]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-004, AP-006]
-cites_adrs: [ADR-0001, ADR-0004, ADR-0007, ADR-0009, ADR-0024]
+cites_adrs: [ADR-0001, ADR-0004, ADR-0005, ADR-0007, ADR-0009, ADR-0024]
 ---
 
 # ADR 0017 — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
@@ -34,7 +34,7 @@ The state account carries the posture [ADR 0009](./0009-secrets-ephemeral-by-def
 
 - **Identity-accessed, no shared keys.** Entra ID auth only; shared-key and SAS access disabled. The pipeline reaches state through its federated/managed identity, never an account key.
 - **No broad reader.** Read access to a state container is least-privilege and explicit; subscription Reader does not transitively grant data-plane access, and data-plane roles are granted per container to the identities that need them.
-- **Encrypted with a customer-managed key.** The account is CMK-capable with infrastructure encryption on; the key topology is the key-management ADR's call.
+- **Encrypted with a customer-managed key.** The account is CMK-capable with infrastructure encryption on; the key topology is the key-management ADR's call (reserved as ADR 0022, tracked in issue #14).
 - **Network-restricted.** No public blob access; reached via private endpoint from the pipeline network.
 - **Access-logged.** Storage diagnostic settings emit data-plane access logs to the observability substrate ([ADR 0005](./0005-observability-substrate-and-signal-parity.md)); anomalous reads are alertable.
 
@@ -63,7 +63,7 @@ A scheduled `plan` against each root's state opens a ticket when non-zero ([ADR 
 ## What this does not decide
 
 - **Concrete storage-account names, regions, replication (LRS/ZRS/GRS), and resource groups** — adopter data, resolved in environment roots against ADR 0024's scope vocabulary.
-- **The CMK key topology** — which key, in which vault, with what rotation — is the key-management ADR's. This ADR requires CMK-readiness, not a specific key.
+- **The CMK key topology** — which key, in which vault, with what rotation — is the key-management ADR's (reserved as ADR 0022, tracked in issue #14). This ADR requires CMK-readiness, not a specific key.
 - **The execution pipeline** — how and where plan and apply run, and the drift-detection job — is the CI/CD ADR. This ADR sets the backend requirements that pipeline meets.
 - **The exact state-key string and the per-workload granularity threshold** — the scope / environment / root dimensions are fixed; the string is firmed up with the reference root.
 - **Non-Azure or third-party backends** — an adopter-exception ADR that names the data-residency tradeoff; not the default.

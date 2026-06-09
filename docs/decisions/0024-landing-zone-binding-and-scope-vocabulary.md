@@ -7,7 +7,7 @@ categories: [foundation, architecture, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-004, AP-005]
-cites_adrs: [ADR-0001, ADR-0003, ADR-0004, ADR-0008, ADR-0010]
+cites_adrs: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0008, ADR-0010]
 ---
 
 # ADR 0024 — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
@@ -55,7 +55,7 @@ Vitruvius assumes the adopter's ALZ provides subscription vending and consumes i
 
 ### 6. The binding lives in the environment root, as code
 
-Resolving roles (§2) to IDs and choosing assignment scopes (§4) happens in the environment root — a consumer ([ADR 0004](./0004-composition-by-output-data.md)) — checked into code ([AP-004](../anti-patterns.md#ap-004--configuration-drift)). The reference environment root that demonstrates this end-to-end is separate work.
+Resolving roles (§2) to IDs and choosing assignment scopes (§4) happens in the environment root — a consumer ([ADR 0004](./0004-composition-by-output-data.md)) — checked into code ([AP-004](../anti-patterns.md#ap-004--configuration-drift)). The reference environment root that demonstrates this end-to-end is [`examples/reference-landingzone`](../../examples/reference-landingzone/), exercised in CI.
 
 ## What this does not decide
 
@@ -64,7 +64,7 @@ Resolving roles (§2) to IDs and choosing assignment scopes (§4) happens in the
 - **The subscription-vending mechanism** — assumed to be ALZ's (§5).
 - **Tenant / Entra ID topology and multi-tenant estates** — out of scope; one tenant assumed unless an adopter ADR says otherwise.
 - **RBAC / PIM binding at each scope** — who can act at a management group or subscription is platform-identity work.
-- **The reference environment root itself** — the artifact that exercises the contract is separate.
+- **The reference environment root itself** — the artifact that exercises the contract lives at [`examples/reference-landingzone`](../../examples/reference-landingzone/), outside this ADR.
 - **The exact input-schema names** — the role vocabulary (§2) is fixed; how it surfaces (a `manifest.yaml` `semantic` hint, a shared variable convention, or a thin data module) is open.
 
 ## Reversibility
