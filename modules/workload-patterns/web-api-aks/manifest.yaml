@@ -45,6 +45,10 @@ spec:
       type: string
       required: true
       description: Kubernetes ServiceAccount the workload's pods authenticate as.
+    - name: private_endpoints
+      type: map(object)
+      required: false
+      description: Private endpoints for the Key Vault (subnet + private-DNS zone IDs from the consumer's networking). The vault is private-only, so the workload needs at least one to reach it.
     - name: log_analytics_workspace_id
       type: string
       required: true
@@ -103,7 +107,7 @@ spec:
   dependencies:
     avm:
       - source: Azure/avm-res-keyvault-vault/azurerm
-        version: ~> 0.10
+        version: 0.10.2
     repo: []
 
   cross_cutting:

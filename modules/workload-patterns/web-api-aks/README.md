@@ -124,7 +124,7 @@ Per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md), AVM-firs
 
 - **No Kubernetes resources.** Adding the kubernetes provider doubles the provider surface and forces every consumer to wire cluster credentials. Defer to v0.2 if a real consumer needs it; until then, the app team owns their YAML.
 - **No APIM facade.** Cross-network HTTP exposure is a separate workload pattern (`workload-patterns/apim-bff`, deferred). Most workloads don't need APIM; pulling it into the default pattern would over-scope.
-- **No private endpoints (yet).** `public_network_access_enabled = false` on the KV is the v0.1.0 hardening; private-endpoint wiring lives in `modules/networking/` and is composed at the consumer boundary. v0.2 may bake in a `private_endpoints` input.
+- **Private endpoints are the consumer's subnet, this module's wiring.** `public_network_access_enabled = false` plus default-Deny ACLs means the vault is reachable *only* through a private endpoint. The `private_endpoints` input passes through to the AVM module — supply at least one (subnet and private-DNS zone IDs come from the consumer's networking per ADR 0018), or the workload identity holds a role on a vault it cannot reach.
 - **No conditional CMK by data-classification.** [ADR 0010](../../../docs/decisions/0010-tag-taxonomy.md) calls for `data-classification=restricted` to trigger CMK; this module does not yet implement that. Tracked as a v0.2 enhancement.
 
 ## Cites

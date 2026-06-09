@@ -27,7 +27,7 @@ resource "azurerm_federated_identity_credential" "aks" {
 
 module "key_vault" {
   source  = "Azure/avm-res-keyvault-vault/azurerm"
-  version = "~> 0.10"
+  version = "0.10.2"
 
   # Keeps terraform test hermetic and avoids sending AVM usage telemetry
   # from platform infrastructure. Do not flip it on.
@@ -43,6 +43,11 @@ module "key_vault" {
   purge_protection_enabled      = true
   public_network_access_enabled = false
   # RBAC authorization is the AVM module's default (legacy_access_policies_enabled = false).
+
+  # With public access off and default-Deny ACLs, the vault is reachable only
+  # through a private endpoint — supply at least one or the workload identity
+  # has a role on a vault it cannot reach.
+  private_endpoints = var.private_endpoints
 
   tags = var.tags
 

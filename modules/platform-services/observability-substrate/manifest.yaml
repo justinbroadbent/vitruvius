@@ -48,6 +48,14 @@ spec:
       required: false
       description: Application Insights retention in days. Default 90.
       vocabulary: ["30", "60", "90", "120", "180", "270", "365", "550", "730"]
+    - name: internet_ingestion_enabled
+      type: bool
+      required: false
+      description: Public-internet telemetry ingestion for the LAW and App Insights. False by default (ADR 0018); private ingestion requires a consumer-provided AMPLS.
+    - name: internet_query_enabled
+      type: bool
+      required: false
+      description: Public-internet query access for the LAW and App Insights. False by default (ADR 0018); operators query via AMPLS-connected network access.
     - name: action_group_name
       type: string
       required: false
@@ -81,9 +89,9 @@ spec:
   dependencies:
     avm:
       - source: Azure/avm-res-operationalinsights-workspace/azurerm
-        version: ~> 0.5
+        version: 0.5.1
       - source: Azure/avm-res-insights-component/azurerm
-        version: ~> 0.4
+        version: 0.4.0
     repo: []
 
   cross_cutting:

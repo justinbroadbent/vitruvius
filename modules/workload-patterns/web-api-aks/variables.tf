@@ -104,6 +104,18 @@ variable "log_analytics_workspace_id" {
   description = "Resource ID of the Log Analytics workspace receiving Key Vault diagnostic logs. Per ADR 0005, all platform observability flows through the substrate."
 }
 
+variable "private_endpoints" {
+  type = map(object({
+    subnet_resource_id            = string
+    private_dns_zone_resource_ids = optional(set(string), [])
+    name                          = optional(string)
+    location                      = optional(string)
+    resource_group_name           = optional(string)
+  }))
+  default     = {}
+  description = "Private endpoints for the Key Vault, passed through to the AVM module. The vault ships with public network access disabled and default-Deny ACLs, so without at least one private endpoint the workload cannot reach it — empty is acceptable only when the consumer wires the endpoint at a higher layer. Subnet and private-DNS zone IDs come from the consumer's networking (ADR 0018)."
+}
+
 # --- Key Vault tunables ---
 
 variable "key_vault_sku" {
