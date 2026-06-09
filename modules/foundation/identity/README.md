@@ -76,4 +76,4 @@ The module being small in v0.1.0 is the design, not an oversight. The AGENTS.md 
 ## Cites
 
 - Honors [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md) — managed identities are the substitute for static client secrets.
-- Prevents [AP-006 (secrets toil)](../../../docs/anti-patterns.md#ap-006--secrets-toil) by establishing managed-identity primitives the rest of the platform consumes.
+- Prevents [AP-006 (secret rotation toil)](../../../docs/anti-patterns.md#ap-006--secret-rotation-toil) by establishing managed-identity primitives the rest of the platform consumes.

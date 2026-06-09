@@ -26,7 +26,7 @@ spec:
     - name: policy_enforcement_mode
       type: string
       required: false
-      description: 'DoNotEnforce' (default; Audit-before-Deny per ADR 0008) or 'Default'.
+      description: "'DoNotEnforce' (default; Audit-before-Deny per ADR 0008) or 'Default'."
       vocabulary: [DoNotEnforce, Default]
     - name: policy_effect
       type: string

@@ -40,13 +40,14 @@ vitruvius/
       README.md             # generated index, grouped by category and status
   modules/
     foundation/             # naming, tags, diagnostic-settings, identity
-    networking/             # hub, spoke, private-endpoint patterns
-    platform-services/      # observability, secrets, container-registry
-    workload-patterns/      # web-api-aks, function-event-driven, data-pipeline,
-                            # apim-bff (the SaaS-core integration shape)
+    networking/             # planned: hub, spoke, private-endpoint patterns
+    platform-services/      # observability-substrate; planned: secrets, container-registry
+    workload-patterns/      # web-api-aks; planned: function-event-driven,
+                            # data-pipeline, apim-bff (the SaaS-core integration shape)
   examples/
-    saas-core-integration/  # AWS-hosted SaaS core ↔ Azure platform — illustrative
-    legacy-replatform/      # vendor BPM/data platforms → Azure-native
+    reference-landingzone/  # composition end-to-end: foundation + platform-services wired
+    saas-core-integration/  # planned: AWS-hosted SaaS core ↔ Azure platform — illustrative
+    legacy-replatform/      # planned: vendor BPM/data platforms → Azure-native
   policies/
     ncua-glba/              # Azure Policy as code, mapped to NIST CSF / GLBA Safeguards
   concepts/
@@ -64,7 +65,7 @@ vitruvius/
 
 ## What's runnable today (v0.1.0)
 
-Four foundation modules and one workload pattern. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
+Six modules and one reference composition. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
 
 | Layer | Module | What it does |
 |---|---|---|
@@ -72,9 +73,12 @@ Four foundation modules and one workload pattern. All experimental — module st
 | foundation | [`tags`](./modules/foundation/tags/) | Tag taxonomy + the policy initiative that enforces it. |
 | foundation | [`diagnostic-settings`](./modules/foundation/diagnostic-settings/) | Substrate-routing safety-net policy initiative. |
 | foundation | [`identity`](./modules/foundation/identity/) | Platform-baseline managed identities (deliberately minimal). |
+| platform-services | [`observability-substrate`](./modules/platform-services/observability-substrate/) | The central LAW + App Insights store every module's diagnostics route to. |
 | workload-pattern | [`web-api-aks`](./modules/workload-patterns/web-api-aks/) | Containerized HTTP API on AKS — workload identity, KV via AVM, hardening initiative. |
 
-Directories with stub READMEs (`modules/networking/`, `modules/platform-services/`, `examples/`, `policies/ncua-glba/`) document scope that's been thought through but not yet built.
+[`examples/reference-landingzone/`](./examples/reference-landingzone/) wires the modules together end-to-end — the worked demonstration of composition by output data (ADR 0004).
+
+Directories with stub READMEs (`modules/networking/`, `policies/ncua-glba/`, the planned examples) document scope that's been thought through but not yet built.
 
 See [`AGENTS.md`](./AGENTS.md) for the conventions every new module must follow, and [`modules/foundation/README.md`](./modules/foundation/README.md) for the foundation layer's overview.
 

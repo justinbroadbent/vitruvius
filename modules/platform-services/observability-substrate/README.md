@@ -49,8 +49,8 @@ This module is consumed at the environment-root boundary (ADR 0004) — it is th
 ```hcl
 module "substrate" {
   source                       = "../../platform-services/observability-substrate"
-  log_analytics_workspace_name = module.naming.observability.log_analytics_workspace
-  application_insights_name    = module.naming.observability.application_insights
+  log_analytics_workspace_name = module.naming.names.log_analytics_workspace
+  application_insights_name    = module.naming.names.application_insights
   resource_group_name          = azurerm_resource_group.platform.name
   location                     = var.location
   tags                         = module.tags.tags

@@ -29,6 +29,10 @@ module "key_vault" {
   source  = "Azure/avm-res-keyvault-vault/azurerm"
   version = "~> 0.10"
 
+  # Keeps terraform test hermetic and avoids sending AVM usage telemetry
+  # from platform infrastructure. Do not flip it on.
+  enable_telemetry = false
+
   name                = var.key_vault_name
   resource_group_name = var.resource_group_name
   location            = var.location
