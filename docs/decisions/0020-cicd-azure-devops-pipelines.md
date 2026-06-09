@@ -7,7 +7,7 @@ categories: [process, infrastructure, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-007, AP-004, AP-006]
-cites_adrs: [ADR-0007, ADR-0009, ADR-0013, ADR-0017, ADR-0024]
+cites_adrs: [ADR-0007, ADR-0009, ADR-0011, ADR-0013, ADR-0017, ADR-0018, ADR-0024]
 ---
 
 # ADR 0020 — CI/CD architecture: OIDC-federated, plan-gated, with a generated deployment ledger

@@ -21,7 +21,7 @@ A chat interface targeted at *querying* (not changing) the repo serves all four 
 
 Backstage Search indexes TechDocs, the catalog, and arbitrary collators; it returns ranked document hits with links. For the *"find me the doc that answers this"* class of question — which is the bulk of stakeholder, new-engineer, and auditor traffic — Backstage Search is sufficient and it costs nothing beyond Backstage itself. If Backstage is being deployed for the catalog, search comes with it.
 
-This concept is only worth building if the team specifically wants generative answers — paraphrased synthesis across multiple documents, structured queries against the manifest index (e.g., *"which experimental ADRs have not been reviewed in 60 days?"*), and natural-language questions that don't map cleanly to a single doc hit. Backstage Search returns hits; this returns answers.
+This concept is only worth building if the team specifically wants generative answers — paraphrased synthesis across multiple documents, structured queries against the manifest index (e.g., *"which modules are still experimental?"*), and natural-language questions that don't map cleanly to a single doc hit. Backstage Search returns hits; this returns answers.
 
 Decision criteria before funding a build:
 
@@ -74,7 +74,7 @@ API-first: a Go HTTP service is the backend. Multiple clients can hit the same A
      └────────────────┘
 ```
 
-**Why Go.** Per the team's language preference, software tools are written in Go: single static binary, small image, fast cold start, tight dependency tree, audit-friendly supply chain (go.sum hashes; vendoring available). Stdlib `net/http` for the server; the official Anthropic Go SDK and Azure SDK for Go for the backend integrations.
+**Why Go.** The repo's existing automation is PowerShell and Python in `scripts/`, chosen for minimal supply-chain exposure; a long-running service keeps that posture with a compiled language. Go fits: single static binary, small image, fast cold start, tight dependency tree, audit-friendly supply chain (go.sum hashes; vendoring available). Stdlib `net/http` for the server; the official Anthropic Go SDK and Azure SDK for Go for the backend integrations.
 
 ### Ingestion
 
@@ -162,7 +162,7 @@ Expected: retrieves [`docs/ai-usage.md`](../../docs/ai-usage.md) § "Where we do
 **New engineer:**
 > *"I need to deploy a web API on AKS. What should I follow?"*
 
-Expected: retrieves `docs/golden-paths.md` and the (forthcoming) `modules/workload-patterns/web-api-aks/manifest.yaml` and `README.md`. Surfaces the contract: *use the pattern → all cross-cutting handled.*
+Expected: retrieves `docs/golden-paths.md` and `modules/workload-patterns/web-api-aks/manifest.yaml` and `README.md`. Surfaces the contract: *use the pattern → all cross-cutting handled.*
 
 **Architect checking intent:**
 > *"Are there any anti-patterns about consolidating monitoring teams?"*
@@ -175,7 +175,7 @@ Expected: retrieves [AP-001](../../docs/anti-patterns.md#ap-001--bolted-on-monit
 Expected: retrieves [ADR 0007](../../docs/decisions/0007-change-as-code.md) and surfaces the deployment-ledger and break-glass-with-auto-PR-back paragraphs as structured evidence.
 
 **Architect doing weekly review:**
-> *"Which experimental ADRs have not been reviewed in 60 days?"*
+> *"Which proposed ADRs are older than the two-week RFC period?"*
 
 Expected: structured query over frontmatter; returns a list, not prose. (This is where the structured-query path matters; similarity search would be useless here.)
 

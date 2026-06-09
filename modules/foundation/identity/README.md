@@ -77,3 +77,7 @@ The module being small in v0.1.0 is the design, not an oversight. The AGENTS.md 
 
 - Honors [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md) — managed identities are the substitute for static client secrets.
 - Prevents [AP-006 (secret rotation toil)](../../../docs/anti-patterns.md#ap-006--secret-rotation-toil) by establishing managed-identity primitives the rest of the platform consumes.
+
+## Why this module ships no `policy/` or `monitoring/`
+
+It creates two managed identities and grants them nothing — there is no data plane to alert on and no posture to enforce beyond what Entra ID already logs. Identity *usage* (sign-ins, role assignments) is monitored at the platform level, not per-module. The empty `ships` arrays in `manifest.yaml` reflect this; per [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md), missing-because-not-applicable is stated, not implied.

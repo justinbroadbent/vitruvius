@@ -7,7 +7,7 @@ categories: [networking, foundation, security]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-003, AP-005, AP-004]
-cites_adrs: [ADR-0004, ADR-0006, ADR-0008, ADR-0017, ADR-0024]
+cites_adrs: [ADR-0003, ADR-0004, ADR-0006, ADR-0008, ADR-0009, ADR-0017, ADR-0024]
 ---
 
 # ADR 0018 — Network topology is hub-spoke with default-deny egress and centralized private DNS
@@ -45,7 +45,7 @@ The `privatelink.*` private-DNS zones are platform-owned, defined once, and link
 
 ### 6. Composition is by output data — no networking orchestrator
 
-Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module produces outputs — hub VNet ID, firewall private IP, private-DNS zone IDs, route-table IDs — and spoke/workload roots consume them at the environment-root boundary. There is no orchestrator module wiring hub to spokes; the consumer does it. Workload patterns accept the relevant outputs as inputs.
+Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module will expose outputs — hub VNet ID, firewall private IP, private-DNS zone IDs, route-table IDs — and spoke/workload roots consume them at the environment-root boundary. This is the contract the v0.2 `modules/networking` implementation must satisfy (tracked in issue #9). There is no orchestrator module wiring hub to spokes; the consumer does it. Workload patterns accept the relevant outputs as inputs.
 
 ## What this does not decide
 

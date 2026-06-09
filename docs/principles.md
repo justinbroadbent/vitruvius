@@ -37,12 +37,12 @@ A module is elegant when reading it teaches you something and editing it doesn't
 
 ## How these are enforced
 
-**Today**, CI runs `terraform fmt -check`, `terraform validate`, and `terraform test` per module and example, plus an ADR-index drift check. That is the full set of automated gates currently wired — see the pipeline definition.
+**Today**, CI runs `terraform fmt -check`, `terraform validate`, and `terraform test` per module and example (the module/example lists are discovered from the filesystem, so new ones cannot merge uncovered), an ADR-index drift check, and manifest validation — every `manifest.yaml` is checked against `schemas/module-manifest.schema.json` and cross-checked against the module's actual code for parity (ADR 0011), and every `policy/*.json` is syntax-checked. That is the full set of automated gates currently wired — see the pipeline definition.
 
 **Planned** (not yet wired; do not describe as live in audit-facing material until they are):
 
 - Static analysis: `tflint`, `tfsec`/`checkov` security scanning.
-- Manifest validation: `manifest.yaml` checked against `schemas/module-manifest.schema.json` and cross-checked against `variables.tf`/`outputs.tf` for parity (ADR 0011).
+- The manifest semantic-rule *warnings* from ADR 0011 §3 (e.g., observability-true-but-no-monitoring).
 - A PR checklist confirming the firmitas/utilitas/venustas review for any new or modified module.
 - An automated first-pass review (CI check, Copilot prompt, or other tooling) that surfaces criteria violations for human reviewers; humans still own the merge.
 

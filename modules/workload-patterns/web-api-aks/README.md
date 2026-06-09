@@ -7,7 +7,7 @@ Workload pattern for a containerized web API running on AKS. Provisions the **Az
 **Is:** the cross-cutting wiring an HTTP-API workload needs on Azure to be secure, observable, and policy-governed by default. Identity is workload-identity-federated (no static secrets per [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md)). Secrets live in a per-workload Key Vault that the workload's UAI has `Key Vault Secrets User` on. Diagnostic logs flow to the platform LAW per [ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md). KV hardening is enforced by the policy initiative this module ships.
 
 **Isn't:**
-- The AKS cluster itself. The cluster is foundation; this module takes its OIDC issuer URL as input.
+- The AKS cluster itself. Today the cluster is the consumer's to provide; this module takes its OIDC issuer URL as input. A platform AKS baseline (cluster module plus its ADR) is future work.
 - Kubernetes resources (namespace, deployment, service, ingress). The app team owns these. The `service_account_annotations` output tells the app team which annotations to put on their `ServiceAccount` to activate workload-identity federation.
 - A multi-cluster orchestrator. One invocation = one workload's primitives on one cluster.
 
@@ -136,3 +136,7 @@ Per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md), AVM-firs
 - Honors [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md) (workload identity, no static client secrets).
 - Honors [ADR 0010](../../../docs/decisions/0010-tag-taxonomy.md) (validates required tag keys at the input).
 - Prevents [AP-001 (bolted-on monitoring)](../../../docs/anti-patterns.md#ap-001--bolted-on-monitoring) and [AP-006 (secret rotation toil)](../../../docs/anti-patterns.md#ap-006--secret-rotation-toil).
+
+## Why this module ships no monitoring (yet)
+
+The module is `experimental`: the Key Vault's diagnostic logs already route to the substrate (the AVM `diagnostic_settings` block), but no alert rules or dashboards ship yet — alerting on vault access patterns is a v0.2 item once a real consumer defines what is worth paging on. The empty `ships.monitoring` array in `manifest.yaml` reflects this; per [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md), an experimental module may ship no monitoring, but it must say so.

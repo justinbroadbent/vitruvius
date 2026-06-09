@@ -48,7 +48,7 @@ If a human ever rotates a secret manually outside the codified path, that is a p
 
 - **Which specific static-secret exceptions exist** — each one is its own documented ADR with the vendor's rotation contract; none is pre-blessed here.
 - **The rotation-handler and CSI/cert-manager implementations** — the requirement is "rotation is checked-in code," not a specific handler design.
-- **The central secrets platform module** — a shared Key Vault + rotation tooling module is deferred (see the CMK / key-management work).
+- **The central secrets platform module** — a shared Key Vault + rotation tooling module is deferred (see the CMK / key-management work, reserved as ADR 0022 and tracked in issue #14).
 
 ## Reversibility
 

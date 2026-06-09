@@ -103,3 +103,7 @@ The initiative is intended to be assigned at a management-group scope so it cove
 - Honors [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md) — Audit-before-Deny defaults.
 - Honors [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md) — substrate-routing policy ships with the foundation module that owns the contract.
 - Prevents [AP-001 (bolted-on monitoring)](../../../docs/anti-patterns.md#ap-001--bolted-on-monitoring) and [AP-002 (telemetry dumping ground)](../../../docs/anti-patterns.md#ap-002--telemetry-dumping-ground).
+
+## Why this module ships no monitoring
+
+The module's resources are policy objects — the *enforcement* half of the monitoring story. Compliance state for the initiative surfaces through Azure Policy evaluation telemetry in the substrate ([ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md)). The empty `ships.monitoring` array in `manifest.yaml` reflects this; per [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md), missing-because-not-applicable is stated, not implied.

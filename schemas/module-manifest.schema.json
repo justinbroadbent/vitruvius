@@ -175,12 +175,12 @@
             "policy": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Azure Policy assignment / initiative names in policy/."
+              "description": "Azure Policy artifacts: definition file names in policy/ or initiative/assignment resource names defined in main.tf (ADR 0003). CI resolves each entry."
             },
             "monitoring": {
               "type": "array",
               "items": { "type": "string" },
-              "description": "Alert / workbook / dashboard names in monitoring/."
+              "description": "Monitoring artifacts: workbook/dashboard file names in monitoring/ or alert resource names defined in main.tf (ADR 0003). CI resolves each entry."
             },
             "runbooks": {
               "type": "array",

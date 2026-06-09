@@ -13,4 +13,4 @@ Other v0.2+ candidates:
 - `secrets` — central Key Vault + rotation tooling (interacts with [ADR 0009](../../docs/decisions/0009-secrets-ephemeral-by-default.md)).
 - `container-registry` — shared ACR with the geo-replication and content-trust posture.
 
-Each module follows the same shape as the existing foundation modules: `manifest.yaml`, `policy/`, `monitoring/`, examples, tests, and AGENTS.md guidance.
+Each module follows the same shape as the existing foundation modules: `manifest.yaml`, policy and monitoring artifacts per [ADR 0003](../../docs/decisions/0003-modules-ship-policy-and-monitoring.md) (inline Terraform or `policy/`/`monitoring/` JSON), examples, tests, and AGENTS.md guidance.

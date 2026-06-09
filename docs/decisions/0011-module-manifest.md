@@ -72,20 +72,20 @@ spec:
 
 ### Validation in CI
 
-Every PR that touches a module runs:
+CI (`scripts/validate-manifests.py`, run by the `manifest` job on every PR) enforces:
 
 1. **Schema validation** against `schemas/module-manifest.schema.json`.
 2. **Coherence checks** between manifest and code:
-   - Declared `spec.inputs` match `variables.tf`.
-   - Declared `spec.outputs` match `outputs.tf`.
-   - Declared `spec.dependencies.avm` match `versions.tf` and `main.tf` module sources.
-   - `spec.dependencies.repo` is empty (enforces [ADR 0004](./0004-composition-by-output-data.md)).
-   - Declared `spec.ships.policy` files exist in `policy/`.
-   - Declared `spec.ships.monitoring` artifacts exist in `monitoring/`.
-   - Declared `spec.examples` subdirs exist in `examples/`.
-   - Declared `spec.tests` files exist in `tests/`.
-   - Cited ADR IDs and AP IDs exist.
-3. **Semantic-rule checks**:
+   - `metadata.name` and `metadata.area` match the module's directory path.
+   - Declared `spec.inputs` match `variables.tf` — names in both directions, and `required` agrees with whether the variable has a default.
+   - Declared `spec.outputs` match `outputs.tf` in both directions.
+   - Declared `spec.dependencies.avm` sources and versions match `main.tf` module blocks.
+   - `spec.dependencies.repo` is empty (enforces [ADR 0004](./0004-composition-by-output-data.md), also enforced by the schema itself).
+   - Declared `spec.ships.policy` / `spec.ships.monitoring` entries resolve to a JSON file in `policy/`/`monitoring/` **or** to a resource defined in `main.tf` — alerts and initiatives are commonly inline Terraform (ADR 0003).
+   - Declared `spec.examples` subdirs and `spec.tests` files exist — and, in reverse, everything on disk is declared.
+   - Cited ADR IDs and AP IDs resolve to real ADR files / anti-pattern headings.
+   - Every `policy/*.json` parses and carries the keys the modules' `jsondecode` calls rely on.
+3. **Semantic-rule checks** (*planned, not yet wired*):
    - If `spec.cross_cutting.observability=true` and `spec.ships.monitoring` is empty, warn — a maturing module should ship monitoring, but an experimental module may not have alerts/dashboards defined yet (the schema treats this as a *should*, not an enforced invariant).
    - If `metadata.status=stable` but no consumer exists in `examples/` of another module, warn.
    - Module-area-specific rules can be added.
@@ -111,7 +111,7 @@ The repo deliberately consolidates this metadata into one file rather than sprea
 ## What this does not decide
 
 - **The schema's future evolution** — `apiVersion: vitruvius.io/v1` is pinned; any breaking change is its own ADR with a migration plan.
-- **When the CI coherence-checks and the `catalog-info.yaml` converter are actually wired** — this ADR specifies the validation and the Backstage bridge; *implementing* them in the pipeline is a follow-up (the manifest-validation CI step and the catalog generation are separate work items, not yet live).
+- **When the `catalog-info.yaml` converter is actually wired** — this ADR specifies the Backstage bridge; *implementing* it is a separate work item, not yet live. (The manifest-validation CI step itself is live — see §Validation in CI; only the semantic-rule warnings remain unwired.)
 - **The Backstage instance itself** — its deployment is gated behind the catalog-contract decision.
 
 ## Reversibility

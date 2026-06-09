@@ -22,5 +22,5 @@ Foundation is for primitives that:
 Things that are **not** foundation:
 
 - Networking primitives — `modules/networking/` (deferred).
-- Shared platform services like the LAW itself, central secret stores, the container registry — `modules/platform-services/` (deferred).
+- Shared platform services like the LAW itself, central secret stores, the container registry — `modules/platform-services/` (the observability substrate ships; the rest is deferred).
 - Workload shapes — `modules/workload-patterns/`.

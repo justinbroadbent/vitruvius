@@ -119,3 +119,7 @@ Per [docs/golden-paths.md](../../../docs/golden-paths.md) § "Defining cross-cut
 - Follows [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md): Audit-before-Deny lifecycle for the policies it ships.
 - Honors [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md): policy ships with the module that owns the contract.
 - Prevents [AP-008](../../../docs/anti-patterns.md#ap-008--tag-chaos).
+
+## Why this module ships no monitoring
+
+The module's resources are policy objects (definitions, an initiative, an assignment) — there is no data plane to alert on. Policy-evaluation results surface through the observability substrate per [ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md). The empty `ships.monitoring` array in `manifest.yaml` reflects this; per [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md), missing-because-not-applicable is stated, not implied.

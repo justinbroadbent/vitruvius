@@ -7,7 +7,7 @@ categories: [process, security, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-004, AP-007]
-cites_adrs: [ADR-0001]
+cites_adrs: [ADR-0001, ADR-0013]
 ---
 
 # ADR 0007 — Change management as code; break-glass is documented

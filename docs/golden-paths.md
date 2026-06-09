@@ -53,8 +53,8 @@ These concerns affect every workload, every audit, and every cross-team interact
 
 - **Identity** — managed identity / workload identity for service-to-service auth; Entra ID for human auth. No static credentials unless documented exception ([ADR 0009](./decisions/0009-secrets-ephemeral-by-default.md)).
 - **Observability** — OpenTelemetry collection format; central substrate; semantic conventions; signal parity across environments ([ADR 0002](./decisions/0002-observability-otel-first.md), [ADR 0005](./decisions/0005-observability-substrate-and-signal-parity.md)).
-- **Secrets** — Key Vault as the only store; rotation handlers checked in; access auditable.
-- **Networking** — hub-spoke topology; private endpoints by default; egress through known points.
+- **Secrets** — Key Vault as the only store; rotation handlers checked in; access auditable ([ADR 0009](./decisions/0009-secrets-ephemeral-by-default.md)).
+- **Networking** — hub-spoke topology; private endpoints by default; egress through known points ([ADR 0018](./decisions/0018-network-topology-hub-spoke.md)).
 - **Naming** — `modules/foundation/naming` is the only authority on resource names.
 - **Tagging** — small required tag set, vocabulary-controlled ([ADR 0010](./decisions/0010-tag-taxonomy.md)).
 - **Service contracts** — APIM for cross-boundary; mesh for in-cluster; Backstage for inventory ([ADR 0006](./decisions/0006-service-discovery-three-layers.md)).
@@ -90,7 +90,7 @@ This is the golden path. It is not gold-plated; it is just well-paved enough tha
 A team that needs to deviate from a workload pattern follows a documented process:
 
 1. **Open an ADR in `docs/decisions/`** explaining what is being deviated from, why, and what cross-cutting concerns the team is taking ownership of.
-2. **Identify the cross-cutting concerns the team will reimplement.** All of them — not a subset. Identity, observability, secrets, networking conventions, deployment ledger, monitoring, policy compliance.
+2. **Identify the cross-cutting concerns the team will reimplement.** All of them — not a subset. Identity, observability, secrets, networking, naming, tagging — the six defined above.
 3. **Show evidence the reimplementation meets the same audit and operational bar** as the pattern's defaults. The platform team reviews; the security team reviews.
 4. **Accept ongoing maintenance.** The deviation is now this team's burden. They cannot ask the platform team to retrofit the pattern's improvements onto their fork.
 

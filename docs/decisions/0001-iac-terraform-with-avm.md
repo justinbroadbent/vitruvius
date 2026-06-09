@@ -7,7 +7,7 @@ categories: [foundation, infrastructure]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: []
-cites_adrs: []
+cites_adrs: [ADR-0004]
 ---
 
 # ADR 0001 — IaC is Terraform, anchored on Azure Verified Modules

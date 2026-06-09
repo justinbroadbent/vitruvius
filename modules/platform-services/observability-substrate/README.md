@@ -13,6 +13,8 @@ It is the implementation side of [ADR 0005](../../../docs/decisions/0005-observa
 | Action group | `azurerm_monitor_action_group` | Alert routing. Created only when `alert_email_receivers` is supplied. |
 | Substrate-deletion alert | `azurerm_monitor_activity_log_alert` | The substrate guards itself (ADR 0008 §3): fires on attempted workspace deletion. |
 
+ADR 0008 §3 calls for substrate-protecting policies to run Deny from day one; that Deny-mode protection (a deny-delete policy or resource lock) is deferred, and the activity-log alert is the interim detective control.
+
 Anchored on AVM per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md). The consumer (an environment root) owns the resource group and supplies names from `foundation/naming`; this module does not create the RG (ADR 0004 / ADR 0024).
 
 ## Inputs
