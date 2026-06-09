@@ -14,51 +14,53 @@ cites_adrs: [ADR-0001, ADR-0004, ADR-0005, ADR-0007, ADR-0009, ADR-0024]
 
 ## Context
 
-State is the substrate every `apply` runs against. Three forces shape how it is stored:
+Terraform keeps a **state file** — its record of everything it has created and each thing's current settings. Every `apply` (the command that makes real changes) runs against that record. Three forces shape how state is stored:
 
-- **State holds secrets.** Terraform state records resource attributes verbatim, including generated passwords, keys, and connection strings. A store that holds secrets is a sensitive artifact ([ADR 0009](./0009-secrets-ephemeral-by-default.md)): who can read it, and how it is protected, is an audit question.
-- **State is a blast-radius boundary.** A single shared state file means one careless `apply` or one corrupted lock can damage the whole estate. Where the boundaries fall determines how much a mistake can reach.
-- **State binds to topology.** An environment is a subscription under a management group ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)); state isolation binds to that scope vocabulary.
+- **State holds secrets.** Terraform writes resource attributes into state verbatim, including generated passwords, keys, and connection strings. A store that holds secrets is a sensitive artifact ([ADR 0009](./0009-secrets-ephemeral-by-default.md)): who can read it, and how it is protected, is an audit question.
+- **State is a blast-radius boundary.** **Blast radius** is how far one mistake can reach. With a single shared state file, one careless `apply` or one corrupted lock can damage the whole estate. Where the state boundaries fall determines how much a mistake can touch.
+- **State binds to topology.** An environment is a subscription under a management group ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)); state isolation follows that same scope vocabulary rather than inventing its own.
 
-[ADR 0004](./0004-composition-by-output-data.md) forbids *modules* from coupling through each other's remote state. This ADR sets the backend contract and holds that no-coupling discipline at the level of separate **roots**.
+[ADR 0004](./0004-composition-by-output-data.md) forbids *modules* from coupling through each other's remote state. This ADR sets the **backend** contract — where state lives and who can reach it — and holds that no-coupling discipline at the level of separate **roots** (a root is a deployable Terraform configuration: the unit you actually run `apply` on).
 
 ## Decision
 
 ### 1. The backend is Azure Storage with native blob-lease locking
 
-State lives in an `azurerm` backend — an Azure Storage account and blob container — using the backend's native blob-lease state locking. State stays in the adopter's own tenant. A third-party state service or non-Azure backend is an adopter exception that names the data-residency tradeoff in its own ADR.
+State lives in an `azurerm` backend — an Azure Storage account and blob container — using the backend's native blob-lease **locking** (the mechanism that stops two applies from writing state at the same time). State stays in the adopter's own tenant. A third-party state service or non-Azure backend is an adopter exception that must name the data-residency tradeoff in its own ADR.
 
 ### 2. State is treated as a sensitive artifact, like a secret store
 
-The state account carries the posture [ADR 0009](./0009-secrets-ephemeral-by-default.md) applies to Key Vault:
+Because state contains secrets, the state account carries the same posture [ADR 0009](./0009-secrets-ephemeral-by-default.md) applies to Key Vault:
 
-- **Identity-accessed, no shared keys.** Entra ID auth only; shared-key and SAS access disabled. The pipeline reaches state through its federated/managed identity, never an account key.
-- **No broad reader.** Read access to a state container is least-privilege and explicit; subscription Reader does not transitively grant data-plane access, and data-plane roles are granted per container to the identities that need them.
-- **Encrypted with a customer-managed key.** The account is CMK-capable with infrastructure encryption on; the key topology is the key-management ADR's call (reserved as ADR 0022, tracked in issue #14).
-- **Network-restricted.** No public blob access; reached via private endpoint from the pipeline network.
-- **Access-logged.** Storage diagnostic settings emit data-plane access logs to the observability substrate ([ADR 0005](./0005-observability-substrate-and-signal-parity.md)); anomalous reads are alertable.
+- **Identity-accessed, no shared keys.** Entra ID authentication only; shared-key and SAS access are disabled. The pipeline reaches state through its federated/managed identity, never through an account key (a copyable, password-like string).
+- **No broad reader.** Read access to a state container is explicit and least-privilege. Holding Reader on the subscription does not transitively grant access to the data itself; data-plane roles are granted per container, to exactly the identities that need them.
+- **Encrypted with a customer-managed key.** The account is **CMK**-capable — ready for encryption with a key the organization controls, rather than one Microsoft manages — with infrastructure encryption on. The key topology is the key-management ADR's call (reserved as ADR 0022, tracked in issue #14).
+- **Network-restricted.** No public blob access; the account is reached via **private endpoint** (a private network address rather than an internet-facing one) from the pipeline network.
+- **Access-logged.** Storage diagnostic settings emit data-plane access logs to the observability substrate ([ADR 0005](./0005-observability-substrate-and-signal-parity.md)), so anomalous reads can trigger alerts.
 
 ### 3. State isolation is one state per blast-radius boundary, keyed by scope
 
-There is no estate-wide state file. State is partitioned along [ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)'s scope vocabulary so a mistake's blast radius is one root:
+There is no estate-wide state file. State is partitioned along [ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)'s scope vocabulary, so a mistake's blast radius is one root:
 
 - **Per environment-subscription.** A `prod` apply cannot touch `dev` state; each environment is a hard partition.
-- **Per root within an environment.** Each environment root or workload deployment has its own state key; a workload `apply` cannot corrupt foundation state, and two roots can apply concurrently.
+- **Per root within an environment.** Each environment root or workload deployment has its own state key, so a workload `apply` cannot corrupt foundation state, and two roots can apply at the same time.
 - **Estate-wide foundation** (management-group policy assignments) has its own state at the platform scope.
 
-The state key encodes scope role, environment, and root name. The dimensions are fixed here; the exact key string is a convention firmed up with the reference environment root.
+The state key — the name under which a root's state is filed — encodes scope role, environment, and root name. Those dimensions are fixed here; the exact key string is a convention firmed up with the reference environment root.
+
+> **In plain terms:** instead of one giant ledger the whole company writes in — where one bad entry can ruin the book — every environment and every root gets its own ledger. A mistake stays on its own pages.
 
 ### 4. Roots share data through published outputs, never by reading each other's state
 
-Cross-root composition — a networking root's VNet ID consumed by a workload root — happens through published, addressable outputs: a live Azure resource resolved by a `data` source or convention, or an explicitly published outputs location. Pointing `terraform_remote_state` at another root's state file is ruled out: it couples to that root's internal layout and requires read access to a sensitive artifact (§2). A root has no read access to another root's state.
+When one root needs a value another root created — say, a workload root consuming the VNet ID a networking root made — it gets it through published, addressable outputs: a live Azure resource resolved by a `data` source or convention, or an explicitly published outputs location. Pointing `terraform_remote_state` at another root's state file is ruled out, for two reasons: it couples the consumer to that root's internal layout, and it requires read access to a sensitive artifact (§2). A root has no read access to another root's state.
 
 ### 5. The backend is bootstrapped as code, then migrated to itself
 
-The state account cannot store its own state before it exists. The bootstrap is a small root applied locally or by the platform pipeline, then migrated to remote state once the account exists — code, not a portal artifact ([AP-004](../anti-patterns.md#ap-004--configuration-drift)). The bootstrap tooling is open; the requirement is that the backend's own creation is code.
+Chicken-and-egg: the state account cannot store its own state before it exists. So the bootstrap is a small root, applied locally or by the platform pipeline, then migrated to remote state once the account exists — code, not a portal artifact ([AP-004](../anti-patterns.md#ap-004--configuration-drift)). The bootstrap tooling is left open; the requirement is that the backend's own creation is code.
 
 ### 6. Remote state enables drift detection
 
-A scheduled `plan` against each root's state opens a ticket when non-zero ([ADR 0007](./0007-change-as-code.md), [AP-004](../anti-patterns.md#ap-004--configuration-drift)). That depends on state being remote, locked, and reachable by the drift job's identity.
+**Drift** is when the real environment no longer matches what the code says. A scheduled `plan` runs against each root's state and opens a ticket whenever it finds a difference ([ADR 0007](./0007-change-as-code.md), [AP-004](../anti-patterns.md#ap-004--configuration-drift)). That only works because state is remote, locked, and reachable by the drift job's identity.
 
 ## What this does not decide
 
@@ -71,13 +73,13 @@ A scheduled `plan` against each root's state opens a ticket when non-zero ([ADR 
 
 ## Reversibility
 
-The load-bearing part is the isolation model, so it is fixed up front. The backend choice (azurerm storage) is moderately reversible: moving to a different store is a per-root `terraform state` migration, bounded because the backend is declared in each root's config. Isolation granularity is the asymmetric one — going coarse→fine later means splitting state and re-homing resources across files, while fine→coarse is rarely wanted — so isolation starts fine-grained. The sensitive-artifact posture (§2) and the no-raw-state-reads discipline (§4) are cheap to hold from day one and expensive to retrofit once broad readers or cross-root state reads exist; both are guarded at review.
+The isolation model is the load-bearing part, so it is fixed up front. The backend choice (azurerm storage) is moderately reversible: moving to a different store is a per-root `terraform state` migration, and it stays bounded because each root declares its own backend. Isolation granularity is the asymmetric choice: going from coarse to fine later means splitting state files and re-homing resources across them, while fine to coarse is rarely wanted — so isolation starts fine-grained. The sensitive-artifact posture (§2) and the no-raw-state-reads rule (§4) are cheap to hold from day one and expensive to retrofit once broad readers or cross-root state reads exist; both are guarded at code review.
 
 ## Consequences
 
 **Positive.**
 
-- State is identity-only, CMK-encrypted, network-restricted, and access-logged — a clear answer to who can read state (§2).
+- State access is identity-only, CMK-encrypted, network-restricted, and logged — a clear answer to who can read state (§2).
 - A mistake's blast radius is one root, not the estate; environments are hard-partitioned and roots apply concurrently (§3).
 - The no-coupling discipline of ADR 0004 holds at the root level (§4); the estate does not grow a web of cross-root state reads.
 - Drift detection has the remote, locked backend it needs (§6).
@@ -85,7 +87,7 @@ The load-bearing part is the isolation model, so it is fixed up front. The backe
 
 **Negative — and accepted.**
 
-- Many small state files cost more bootstrap and key-convention discipline than one large file. The alternative is a single estate-wide blast radius.
+- Many small state files cost more bootstrap work and key-convention discipline than one large file. The alternative is a single estate-wide blast radius.
 - Disabling shared-key access and brokering everything through identity is more setup than copying an access key into a pipeline. It is paid once at platform setup.
 - Forbidding raw cross-root state reads makes some handoffs more verbose than a one-line `terraform_remote_state`. The verbosity is the cost of not coupling roots to each other's internals.
 

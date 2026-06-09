@@ -14,48 +14,50 @@ cites_adrs: [ADR-0005, ADR-0011]
 
 ## Context
 
-The conventional shape in many estates is:
+The conventional arrangement in many organizations splits one job across three teams:
 
-- A "platform" team owns infrastructure modules.
-- A separate "monitoring" team adds dashboards, alerts, and diagnostic settings later.
-- A separate "security" or "GRC" team adds Azure Policy assignments later.
+- A "platform" team builds the infrastructure modules.
+- A separate "monitoring" team adds the dashboards, alerts, and diagnostic settings later.
+- A separate "security" or "GRC" (governance, risk, and compliance) team adds the **Azure Policy** assignments — Azure's automated governance rules — later.
 
-This produces a long tail of resources without diagnostic settings, alerts that go stale because they're disconnected from the workloads they describe, and policy gaps that are only discovered in audit.
+Every handoff is a seam that drifts. The result: a long tail of resources with no diagnostic settings, alerts that go stale because they are disconnected from the workloads they describe, and policy gaps discovered only at audit time.
 
 ## Decision
 
-**A module ships with the policy assignments and the monitoring artifacts that govern the resources it produces.** Concretely:
+**A module ships with the policy assignments and the monitoring artifacts that govern the resources it produces.** The rules and the dashboards travel in the same package as the thing they watch. Concretely:
 
-- **Policy** — Azure Policy definitions ship as JSON in `policy/`; the initiative and assignment that wire them up are Terraform resources in `main.tf`. If the module produces no auditable resources (e.g., a pure-logic naming module), the README states this explicitly.
-- **Monitoring** — alert rules may be defined inline in `main.tf` as Terraform resources (the common case for a handful of alerts); workbook and dashboard JSON live in `monitoring/`. Diagnostic settings are wired in `main.tf` and emit to a Log Analytics workspace passed in as an input.
-- Either way, the module's `manifest.yaml` names everything it ships in `spec.ships`, and CI checks each name resolves to a file in `policy/`/`monitoring/` or to a resource defined in `main.tf` (ADR 0011).
+- **Policy** — Azure Policy definitions ship as JSON in the module's `policy/` folder; the **initiative** (a named bundle of related policies) and the assignment that activate them are Terraform resources in `main.tf`. If the module produces no auditable resources (e.g., a pure-logic naming module), the README states this explicitly.
+- **Monitoring** — alert rules may be defined inline in `main.tf` as Terraform resources (the common case for a handful of alerts); workbook and dashboard JSON live in `monitoring/`. **Diagnostic settings** — the switch that makes an Azure resource emit its logs and metrics — are wired in `main.tf` and emit to a Log Analytics workspace passed in as an input.
+- Either way, the module's `manifest.yaml` (its machine-readable spec sheet) names everything it ships in `spec.ships`, and CI checks that each name resolves to a file in `policy/`/`monitoring/` or to a resource defined in `main.tf` (ADR 0011).
 - An experimental module may ship no monitoring yet — but its README must say so explicitly rather than leaving the gap implied.
 
 Operating expectations:
 
 - A consumer who deploys a module gets the policy and monitoring **automatically**, without having to coordinate with another team.
-- If a security or monitoring team wants to add controls beyond what the module ships, they do so via additional assignments at the management-group or subscription scope — not by editing module-level monitoring.
+- If a security or monitoring team wants controls beyond what the module ships, they add assignments at the **management-group** or subscription scope (a management group is a folder that groups Azure subscriptions so one rule can govern many of them) — they do not edit module-level monitoring.
 
 ## What this does not decide
 
 - **Where org-wide controls beyond the module are assigned** — management-group / subscription-scope assignments are the consumer's (landing-zone's) call, not the module's.
-- **The specific alert thresholds, workbooks, and dashboards** each module ships — that is per-module authoring, sized to the resources it produces.
+- **The specific alert thresholds, workbooks, and dashboards** each module ships — that is per-module authoring, sized to the resources the module produces.
 - **The monitoring backend** the artifacts emit into — that is the observability substrate (ADR 0005).
 
 ## Reversibility
 
-**Load-bearing (one-way door) as a convention.** This decision shapes every module's directory layout and the authoring contract (an author owns policy + monitoring, not just resources). The artifacts themselves are additive and per-module, but reversing the *convention* — re-homing policy and monitoring into separate bolt-on teams — means re-distributing artifacts across every module and re-opening [AP-001](../anti-patterns.md#ap-001--bolted-on-monitoring). What would have to change: not a single module mechanically, but the team topology and the review expectation. Cheap to erode one module at a time, expensive to recover estate-wide — hence enforced by review and the manifest's `ships` contract (ADR 0011).
+**Load-bearing (a one-way door) as a convention.** This decision shapes every module's directory layout and the authoring contract: an author owns the policy and monitoring, not just the resources. The artifacts themselves are additive and per-module — but reversing the *convention*, by re-homing policy and monitoring into separate bolt-on teams, means redistributing artifacts across every module and re-opening [AP-001](../anti-patterns.md#ap-001--bolted-on-monitoring), the bolted-on-monitoring trap. What would have to change is not any single module mechanically, but the team topology and the review expectation. The convention is cheap to erode one module at a time and expensive to recover estate-wide — hence it is enforced by review and by the manifest's `ships` contract (ADR 0011).
+
+> **In plain terms:** a car comes with its dashboard and warning lights built in. You don't buy the car and then hire a separate company to bolt on a speedometer that may or may not match the engine.
 
 ## Consequences
 
 **Positive:**
 
 - Net-new resources are observable and policy-governed from day one.
-- Monitoring drift (alerts pointing at deleted resources; workbooks describing fields that no longer exist) drops to near-zero because monitoring is versioned with the resource.
+- Monitoring drift — alerts pointing at deleted resources, workbooks describing fields that no longer exist — drops to near zero, because the monitoring is versioned together with the resource it watches.
 - The module's contract is honest: "this is what I produce, and these are the controls and signals it carries."
 
 **Negative / things we accept:**
 
-- Module authors carry more responsibility — they cannot punt monitoring to a downstream team.
+- Module authors carry more responsibility — they cannot hand monitoring off to a downstream team.
 - Centralized monitoring teams need to adapt; their work shifts toward cross-cutting platforms (APM, log search, the OTel collector itself) rather than per-resource dashboarding.
-- Some duplication is possible across modules with similar resources. We accept some duplication over the alternative — premature abstraction into a "shared monitoring" module that re-introduces the bolt-on shape.
+- Some duplication is possible across modules with similar resources. We accept some duplication over the alternative — prematurely extracting a "shared monitoring" module, which would re-introduce the bolt-on shape this ADR exists to prevent.

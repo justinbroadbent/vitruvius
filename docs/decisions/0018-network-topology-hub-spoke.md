@@ -14,38 +14,40 @@ cites_adrs: [ADR-0003, ADR-0004, ADR-0006, ADR-0008, ADR-0009, ADR-0017, ADR-002
 
 ## Context
 
-[ADR 0006](./0006-service-discovery-three-layers.md) decides service *discovery* — runtime resolution, cross-boundary contract, inventory. This ADR decides the L3 topology those layers sit on. The forces:
+[ADR 0006](./0006-service-discovery-three-layers.md) decides service *discovery* — how services find each other at runtime, how cross-boundary calls are governed, and how humans find what exists. This ADR decides the **network topology** those layers sit on: the L3 layout — the IP addressing and routing layer — of the estate's networks. The forces:
 
-- **Regulated-FS egress control.** A credit union must be able to say where data can leave the network. Known, audited egress points are the answer; unrestricted internet egress is not.
-- **Private-by-default.** State ([ADR 0017](./0017-terraform-state-and-backend.md)) and Key Vault ([ADR 0009](./0009-secrets-ephemeral-by-default.md)) sit behind private endpoints, which require a private-DNS resolution strategy.
-- **A cross-cloud neighbor.** The estate integrates with a vendor-hosted SaaS banking core on another cloud ([ADR 0006](./0006-service-discovery-three-layers.md)); address space must not overlap with it or with on-prem.
-- **Reference, not blueprint.** The adopter has a tenant, an ALZ connectivity subscription, and real CIDRs. This ADR decides the shape and binds to ADR 0024's scopes; the numbers are the adopter's.
+- **Regulated-FS egress control.** **Egress** is traffic leaving the network. A credit union must be able to say where data can leave; known, audited egress points are the answer, and unrestricted internet egress is not.
+- **Private-by-default.** Terraform state ([ADR 0017](./0017-terraform-state-and-backend.md)) and Key Vault ([ADR 0009](./0009-secrets-ephemeral-by-default.md)) sit behind **private endpoints** — private network addresses instead of internet-facing ones — and private endpoints only work with a strategy for **private DNS**, the name-lookup service that resolves those private addresses.
+- **A cross-cloud neighbor.** The estate integrates with a vendor-hosted SaaS banking core on another cloud ([ADR 0006](./0006-service-discovery-three-layers.md)); our address space must not overlap with it or with on-prem networks.
+- **Reference, not blueprint.** The adopter has a tenant, an ALZ connectivity subscription, and real CIDRs (a **CIDR** is a block of IP addresses, written like `10.0.0.0/16`). This ADR decides the shape and binds to ADR 0024's scopes; the numbers are the adopter's.
 
 ## Decision
 
 ### 1. Hub-spoke, aligned to CAF/ALZ; the hub is platform-owned
 
-A central hub VNet per region holds shared connectivity services (egress firewall, private-DNS resolution, hybrid-connectivity gateways, Bastion). Workload spokes peer to the hub. The hub lives in the ALZ platform/connectivity subscription; spokes live in the environment-subscriptions ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)). Traditional VNet hub-spoke is the reference default; Azure Virtual WAN is a supported variant for estates that outgrow self-managed peering — the contract below holds for either.
+**Hub-spoke** is the wheel-shaped layout: one central network holds the shared plumbing, and each workload gets its own network connected to it. Concretely, a central hub **VNet** (an Azure virtual network) per region holds the shared connectivity services — the egress firewall, private-DNS resolution, gateways for hybrid connectivity to on-prem, and Bastion (Azure's managed jump-box for administrative access). Workload spokes **peer** to the hub (peering is the link that connects two VNets). The hub lives in the ALZ platform/connectivity subscription; spokes live in the environment-subscriptions ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)). Traditional VNet hub-spoke is the reference default; Azure Virtual WAN (Microsoft's managed version of the same shape) is a supported variant for estates that outgrow self-managed peering — the contract below holds for either.
 
 ### 2. Spokes never peer to each other; cross-spoke traffic transits the hub
 
-Peering is hub↔spoke only. East-west traffic that must cross spokes routes through the hub for inspection and policy control. The hub is the chokepoint that makes egress control (§4) and segmentation enforceable.
+Peering is hub↔spoke only. **East-west traffic** — traffic between workloads, as opposed to traffic entering or leaving the estate — that must cross spokes routes through the hub, where it can be inspected and policy-controlled. The hub is the chokepoint that makes egress control (§4) and segmentation enforceable.
+
+> **In plain terms:** the network is shaped like an airport. Every workload (spoke) connects only to the central terminal (the hub), and everything leaving the estate passes through one guarded exit with a known list of allowed destinations.
 
 ### 3. Address space is centrally allocated, non-overlapping, and documented
 
-Address space is allocated centrally, is non-overlapping across environments, regions, on-prem, and the other cloud's SaaS core, and is documented as code in the environment roots. The reference scheme is a per-environment-per-region supernet carved into spoke subnets; the concrete base prefixes, VNet/subnet sizes, and region pairs are adopter data.
+The platform allocates address space centrally, keeps it non-overlapping across environments, regions, on-prem, and the other cloud's SaaS core, and documents it as code in the environment roots. The reference scheme is one large block (a **supernet**) per environment per region, carved into spoke subnets; the concrete base prefixes, VNet/subnet sizes, and region pairs are adopter data.
 
 ### 4. Egress is default-deny through the hub firewall; egress points are known and audited
 
-All spoke egress (`0.0.0.0/0`) routes via UDR to the hub's Azure Firewall (the reference default; an NVA is the adopter alternative), which enforces FQDN-allowlist egress. Spokes have no direct internet egress. The allowlist is built per workload and follows the [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) audit-before-deny lifecycle, so default-deny does not become an [AP-005](../anti-patterns.md#ap-005--sweeping-policy-bans) blanket ban.
+All spoke egress (`0.0.0.0/0` — i.e., everything outbound) routes via **UDR** (a user-defined route — a routing rule that overrides Azure's defaults) to the hub's Azure Firewall (the reference default; a third-party network virtual appliance, an **NVA**, is the adopter alternative). The firewall enforces an **FQDN allowlist**: only traffic to explicitly listed domain names gets out. Spokes have no direct internet egress. The allowlist is built per workload and follows the [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) audit-before-deny lifecycle, so default-deny does not become an [AP-005](../anti-patterns.md#ap-005--sweeping-policy-bans) blanket ban.
 
 ### 5. Private DNS is centralized in the platform and auto-registered
 
-The `privatelink.*` private-DNS zones are platform-owned, defined once, and linked to the spokes and the hub resolver. Private-endpoint A-records register into these central zones automatically via an Azure Policy `DeployIfNotExists` initiative ([ADR 0003](./0003-modules-ship-policy-and-monitoring.md), [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md)). Resolution is served from the hub (Azure DNS Private Resolver), so on-prem and cross-cloud callers resolve the same names.
+The `privatelink.*` private-DNS zones — the lookup zones that resolve Azure services to their private addresses — are platform-owned, defined once, and linked to the spokes and the hub resolver. When a private endpoint is created, its DNS record (its A-record) registers into these central zones automatically, via an Azure Policy `DeployIfNotExists` initiative ([ADR 0003](./0003-modules-ship-policy-and-monitoring.md), [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md)). Resolution is served from the hub (Azure DNS Private Resolver), so on-prem and cross-cloud callers resolve the same names as everything inside.
 
 ### 6. Composition is by output data — no networking orchestrator
 
-Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module will expose outputs — hub VNet ID, firewall private IP, private-DNS zone IDs, route-table IDs — and spoke/workload roots consume them at the environment-root boundary. This is the contract the v0.2 `modules/networking` implementation must satisfy (tracked in issue #9). There is no orchestrator module wiring hub to spokes; the consumer does it. Workload patterns accept the relevant outputs as inputs.
+Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module will expose outputs — hub VNet ID, firewall private IP, private-DNS zone IDs, route-table IDs — and spoke/workload roots consume them at the environment-root boundary. This is the contract the v0.2 `modules/networking` implementation must satisfy (tracked in issue #9). There is no orchestrator module wiring hub to spokes; the consumer does the wiring. Workload patterns accept the relevant outputs as inputs.
 
 ## What this does not decide
 
@@ -59,23 +61,23 @@ Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module will expo
 
 ## Reversibility
 
-The hub-spoke shape and the address plan are load-bearing; the choices around them are not. Non-overlapping address allocation (§3) is the most expensive to unwind, since re-IPing a live estate touches every spoke, peering, route, and firewall rule — so the discipline is held from day one while the numbers stay deferred. Default-deny egress (§4) is cheap to hold from the start and painful to retrofit, so it is a day-one posture. Firewall-vs-NVA and the egress allowlist are config; hub-spoke-vs-vWAN is an adopter swap the contract survives; central DNS zones are additive.
+The hub-spoke shape and the address plan are load-bearing; the choices around them are not. Non-overlapping address allocation (§3) is the most expensive thing to unwind — re-numbering a live estate touches every spoke, peering, route, and firewall rule — so the discipline is held from day one even while the actual numbers stay deferred. Default-deny egress (§4) is cheap to hold from the start and painful to retrofit, so it is a day-one posture. Firewall-vs-NVA and the egress allowlist are configuration; hub-spoke-vs-vWAN is an adopter swap the contract survives; central DNS zones are additive.
 
 ## Consequences
 
 **Positive.**
 
 - Egress is a known, audited, default-deny set through one chokepoint — a clear answer to where data can leave (§4).
-- The private endpoints assumed by ADR 0017 and ADR 0009 resolve, via central auto-registered DNS (§5).
-- Topology stays portable under ADR 0006's discovery layers: services move spokes or regions without consumer redeploys ([AP-003](../anti-patterns.md#ap-003--hard-coded-service-endpoints)).
-- No networking orchestrator; the estate's wiring is legible at the environment-root boundary (ADR 0004), and address allocation is documented as code (AP-004).
+- The private endpoints assumed by ADR 0017 and ADR 0009 actually resolve, via central auto-registered DNS (§5).
+- Topology stays portable under ADR 0006's discovery layers: services can move spokes or regions without their consumers redeploying ([AP-003](../anti-patterns.md#ap-003--hard-coded-service-endpoints)).
+- No networking orchestrator: the estate's wiring is legible at the environment-root boundary (ADR 0004), and address allocation is documented as code (AP-004).
 
 **Negative — and accepted.**
 
-- A hub chokepoint adds a hop and a shared dependency every spoke relies on. The chokepoint is the control point egress and segmentation require; the hub is built for HA accordingly.
-- Default-deny egress means new external dependencies need an allowlist change. The ADR 0008 audit-then-enforce lifecycle softens this.
-- Central address allocation is more coordination than letting teams pick CIDRs. The alternative is overlap and the re-IP migration §3 avoids.
-- Self-managed hub-spoke is more moving parts than Virtual WAN, named as the adopter off-ramp at scale.
+- A hub chokepoint adds a network hop and a shared dependency every spoke relies on. The chokepoint is the control point that egress and segmentation require; the hub is built for high availability accordingly.
+- Default-deny egress means every new external dependency needs an allowlist change. The ADR 0008 audit-then-enforce lifecycle softens this.
+- Central address allocation is more coordination than letting teams pick their own CIDRs. The alternative is overlap and the re-numbering migration §3 avoids.
+- Self-managed hub-spoke is more moving parts than Virtual WAN, which is named as the adopter off-ramp at scale.
 
 ## Cites
 

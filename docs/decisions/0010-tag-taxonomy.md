@@ -14,9 +14,9 @@ cites_adrs: [ADR-0003, ADR-0008]
 
 ## Context
 
-[AP-008 — Tag chaos](../anti-patterns.md#ap-008--tag-chaos) — free-form tags accumulate entropy. Cost-by-team reporting becomes manual. Policy targeting cannot rely on tags. Lifecycle automation cannot use tags as routing keys. Removing a tag breaks something nobody can identify.
+A **tag** is a label attached to a cloud resource (`owner=payments-team`). [AP-008 — Tag chaos](../anti-patterns.md#ap-008--tag-chaos) is what free-form tagging becomes: the same idea spelled five ways, so cost-by-team reporting turns into manual work, policy targeting can't trust the tags, lifecycle automation can't use them as routing keys, and removing a tag breaks something nobody can identify.
 
-Tags are a schema. Without enforcement, the schema rots. The fix is a small required tag set, vocabulary-controlled values, automated enforcement, and operational hooks that make the tags do real work.
+Tags are a schema — a strict format, like the required fields on a form. Without enforcement, the schema rots. The fix is a small required tag set, **vocabulary-controlled** values (only values from a fixed, spell-checked list are accepted), automated enforcement, and operational hooks that make the tags do real work.
 
 ## Decision
 
@@ -34,35 +34,39 @@ A small, mandatory, vocabulary-controlled tag set governs every taggable resourc
 
 ### Optional tags (vocabulary-controlled)
 
-- `app` — application alias (free string, but matches an entry in the Backstage catalog)
+- `app` — application alias (free string, but it must match an entry in the Backstage catalog, our service directory)
 - `component` — sub-component within an app
 - `lifecycle` — `stable`, `experimental`, `deprecated`
 
 ### Forbidden
 
 - Free-form tags outside the taxonomy.
-- Person-name tags (`owner=jane.doe`); ownership is at team granularity.
+- Person-name tags (`owner=jane.doe`); ownership is at team granularity — people change roles, teams persist.
 - `temp`, `test`, `delete-me` — it is never temporary.
 - Inconsistent capitalization or spelling. `env=prod` is the only correct form; `env=Prod`, `Env=production`, `environment=PROD` are all rejected.
 
 ### Enforcement
 
-- **Azure Policy `modify` effect** inherits required tags from resource group / subscription where the inheriting tag is missing on a child resource.
-- **Azure Policy `audit` and `deny` effects** govern allowed values. The lifecycle in [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) applies — new value restrictions ship in `Audit` mode before promotion.
+Enforcement is automated through **Azure Policy** (Azure's built-in rule-enforcement system):
+
+- The **`modify` effect** automatically fills in a required tag on a child resource by inheriting it from the resource group or subscription when it is missing.
+- The **`audit` and `deny` effects** govern allowed values. The lifecycle in [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) applies — new value restrictions ship in watch-only `Audit` mode before being promoted to blocking.
 - The **`modules/foundation/tags`** module ships the policy assignments and the canonical vocabulary. Adding a value is a PR to the module.
 
 ### Operational hooks (tags do real work, or they don't exist)
 
-- `data-classification=restricted` triggers customer-managed keys, private endpoints, and stricter diagnostic-setting retention.
-- `business-criticality=tier-0` triggers stricter SLA monitoring, geo-redundancy requirements, and PIM-only change paths.
-- `owner` drives alert routing (via Backstage catalog), access-review notifications, and quarterly review cadence.
-- `lifecycle=experimental` triggers a 30-day TTL job that warns and cleans up.
+Every tag drives some automated behavior — a tag that controls nothing isn't allowed to exist:
+
+- `data-classification=restricted` triggers customer-managed keys (encryption keys we hold rather than Microsoft), private endpoints (no public network path), and stricter diagnostic-setting retention.
+- `business-criticality=tier-0` triggers stricter SLA monitoring, geo-redundancy requirements, and PIM-only change paths (changes require checked-out, logged admin access).
+- `owner` drives alert routing (via the Backstage catalog), access-review notifications, and the quarterly review cadence — it decides who gets paged.
+- `lifecycle=experimental` triggers a 30-day TTL job that warns the owner and then cleans up.
 - `env` shapes the policy enforcement tier (`Audit` in dev/sandbox, `Deny` in prod).
 - `cost-center` enables automated cost allocation reports without per-resource tagging review.
 
 ### Governance
 
-Tag taxonomy changes go through ADR. Adding a new required tag is a breaking change managed deliberately — existing resources need a back-fill plan before the new requirement promotes from `Audit` to `Deny`. Adding a new value to an existing vocabulary is a normal change.
+Tag taxonomy changes go through ADR. Adding a new *required* tag is a breaking change managed deliberately — existing resources need a back-fill plan (retro-tagging everything already deployed) before the new requirement promotes from `Audit` to `Deny`. Adding a new *value* to an existing vocabulary is a normal change.
 
 ## What this does not decide
 
@@ -74,10 +78,10 @@ Tag taxonomy changes go through ADR. Adding a new required tag is a breaking cha
 
 The two halves of this decision sit on opposite sides of the door, and the split *is* the design:
 
-- **The set of required keys: load-bearing (one-way door).** Once resources are tagged and policies, cost reports, and lifecycle automation target those keys, renaming or removing a key breaks policy targeting, cost allocation, and cleanup jobs across the whole estate and forces an estate-wide back-fill. The ADR already names "add a required tag" as a breaking change; *remove or rename* one is worse. Commit to the keys carefully.
+- **The set of required keys: load-bearing (one-way door).** Once resources are tagged and policies, cost reports, and lifecycle automation all target those keys, renaming or removing a key breaks policy targeting, cost allocation, and cleanup jobs across the whole estate, and forces an estate-wide back-fill. The ADR already names "add a required tag" as a breaking change; *removing or renaming* one is worse. Commit to the keys carefully.
 - **The vocabulary of allowed values: cheap to change (two-way door).** Adding an allowed value is "a PR to the `foundation/tags` module," shipped through Audit-before-Deny (ADR 0008) — additive, low blast radius. Iterate freely here.
 
-That asymmetry is the contract-vs-specifics line: the **keys** are the contract, the **values** are tunable.
+> **In plain terms:** the tag *keys* are like the printed fields on a shipping label — change those and every scanner in the warehouse breaks. The allowed *values* are like adding a new zip code to the list — routine. That asymmetry is the contract-vs-specifics line: the **keys** are the contract, the **values** are tunable.
 
 ## Consequences
 
