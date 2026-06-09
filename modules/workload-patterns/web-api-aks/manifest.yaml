@@ -66,7 +66,7 @@ spec:
     - name: policy_enforcement_mode
       type: string
       required: false
-      description: 'DoNotEnforce' for the Audit phase (ADR 0008); 'Default' once promoted.
+      description: "'DoNotEnforce' for the Audit phase (ADR 0008); 'Default' once promoted."
       vocabulary: [DoNotEnforce, Default]
 
   outputs:

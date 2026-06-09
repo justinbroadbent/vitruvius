@@ -10,7 +10,7 @@ Reference compositions — foundation and workload-pattern modules wired togethe
 
 Both are blocked on real information about the target integration, not on the repo:
 
-- [`saas-core-integration/`](./saas-core-integration/) — AWS-hosted SaaS core ↔ Azure platform integration. The Lumin Digital cross-cloud story.
+- [`saas-core-integration/`](./saas-core-integration/) — AWS-hosted SaaS core ↔ Azure platform integration. The cross-cloud SaaS-core story.
 - [`legacy-replatform/`](./legacy-replatform/) — vendor BPM and data platforms migrated to Azure-native equivalents.
 
 Each example will eventually contain:

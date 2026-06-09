@@ -5,8 +5,10 @@ terraform {
 
   required_providers {
     azurerm = {
-      source  = "hashicorp/azurerm"
-      version = ">= 3.100.0"
+      source = "hashicorp/azurerm"
+      # 4.35+ required: azurerm_management_group_policy_set_definition was
+      # introduced in 4.35.0.
+      version = ">= 4.35.0"
     }
   }
 }

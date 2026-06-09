@@ -135,4 +135,4 @@ Per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md), AVM-firs
 - Honors [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md) (Audit + DoNotEnforce defaults).
 - Honors [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md) (workload identity, no static client secrets).
 - Honors [ADR 0010](../../../docs/decisions/0010-tag-taxonomy.md) (validates required tag keys at the input).
-- Prevents [AP-001 (bolted-on monitoring)](../../../docs/anti-patterns.md#ap-001--bolted-on-monitoring) and [AP-006 (secrets toil)](../../../docs/anti-patterns.md#ap-006--secrets-toil).
+- Prevents [AP-001 (bolted-on monitoring)](../../../docs/anti-patterns.md#ap-001--bolted-on-monitoring) and [AP-006 (secret rotation toil)](../../../docs/anti-patterns.md#ap-006--secret-rotation-toil).

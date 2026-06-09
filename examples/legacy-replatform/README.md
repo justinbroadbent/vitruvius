@@ -13,7 +13,7 @@ What this example will eventually demonstrate:
 
 What's blocking:
 
-- The choice of legacy system to model. Real WSECU systems are likely to differ from the generic example shape; modeling a specific real one is more useful than modeling an abstract one.
+- The choice of legacy system to model. The adopter's real systems are likely to differ from the generic example shape; modeling a specific real one is more useful than modeling an abstract one.
 - The phasing decisions (how aggressive is "phase 2 → phase 3" promotion) depend on team capacity and risk appetite, not platform-team unilateral choice.
 
 When the build starts, the example documents the migration **pattern**, not a specific vendor's product. The pattern is the reusable artifact; the vendor specifics are environment-specific and live in that environment's runbook, not in this repo.

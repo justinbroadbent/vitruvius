@@ -57,7 +57,7 @@ spec:
     - name: policy_enforcement_mode
       type: string
       required: false
-      description: 'DoNotEnforce' (default, Audit-before-Deny) or 'Default' once promoted.
+      description: "'DoNotEnforce' (default, Audit-before-Deny) or 'Default' once promoted."
       vocabulary: [DoNotEnforce, Default]
     - name: policy_assignment_location
       type: string
