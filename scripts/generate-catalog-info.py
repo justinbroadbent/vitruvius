@@ -54,6 +54,9 @@ def component_yaml(manifest: dict, area: str, name: str) -> str:
     tags = [area, f"status-{meta['status']}"]
     tags += sorted(k for k, v in spec["cross_cutting"].items() if v)
     tags += [p for p in ("firmitas", "utilitas", "venustas") if p in spec["cites"]["principles"]]
+    # Dedupe preserving order: a module whose area is also a cross-cutting
+    # concern (networking/hub) would otherwise carry the tag twice.
+    tags = list(dict.fromkeys(tags))
 
     lines = [
         HEADER,
