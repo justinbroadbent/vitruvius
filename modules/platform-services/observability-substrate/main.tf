@@ -1,5 +1,8 @@
 locals {
   create_action_group = length(var.alert_email_receivers) > 0
+
+  action_group_name       = coalesce(var.action_group_name, "${var.name_prefix}-alerts")
+  action_group_short_name = coalesce(var.action_group_short_name, substr(var.name_prefix, 0, 12))
 }
 
 # The central Log Analytics workspace — the substrate every module's
@@ -50,9 +53,9 @@ module "application_insights" {
 resource "azurerm_monitor_action_group" "platform" {
   count = local.create_action_group ? 1 : 0
 
-  name                = var.action_group_name
+  name                = local.action_group_name
   resource_group_name = var.resource_group_name
-  short_name          = var.action_group_short_name
+  short_name          = local.action_group_short_name
   tags                = var.tags
 
   dynamic "email_receiver" {
@@ -71,7 +74,7 @@ data "azurerm_subscription" "current" {}
 # module ships its own guard. An activity-log alert fires when someone
 # attempts to delete the workspace, routed to the platform action group.
 resource "azurerm_monitor_activity_log_alert" "substrate_deletion" {
-  name                = "vitruvius-substrate-deletion"
+  name                = "${var.name_prefix}-substrate-deletion"
   resource_group_name = var.resource_group_name
   location            = "global"
   scopes              = [data.azurerm_subscription.current.id]

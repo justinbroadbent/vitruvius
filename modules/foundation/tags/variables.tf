@@ -81,6 +81,17 @@ variable "lifecycle_stage" {
   }
 }
 
+variable "name_prefix" {
+  type        = string
+  default     = "platform"
+  description = "Prefix for the Azure resource names this module creates (policy definitions, initiative, assignment). Identifies platform-library artifacts in the estate; set it to your org short-code if you prefer. Kept short because management-group policy assignment names cap at 24 characters."
+
+  validation {
+    condition     = can(regex("^[a-z0-9](-?[a-z0-9])*$", var.name_prefix)) && length(var.name_prefix) >= 2 && length(var.name_prefix) <= 9
+    error_message = "name_prefix must be 2-9 chars: lowercase alphanumeric with single interior hyphens."
+  }
+}
+
 variable "policy_management_group_id" {
   type        = string
   default     = null

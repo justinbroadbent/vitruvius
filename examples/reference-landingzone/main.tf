@@ -67,6 +67,10 @@ module "identity" {
 module "observability_substrate" {
   source = "../../modules/platform-services/observability-substrate"
 
+  # Platform-library artifacts (alerts, policy objects) carry the org code as
+  # their prefix; the module default is the generic 'platform'.
+  name_prefix = var.org
+
   log_analytics_workspace_name = module.naming.names.log_analytics_workspace
   application_insights_name    = module.naming.names.application_insights
   resource_group_name          = azurerm_resource_group.platform.name
@@ -81,6 +85,7 @@ module "observability_substrate" {
 module "diagnostic_settings" {
   source = "../../modules/foundation/diagnostic-settings"
 
+  name_prefix                = var.org
   policy_management_group_id = var.platform_management_group_id
   policy_assignment_scope    = var.platform_management_group_id
   log_analytics_workspace_id = module.observability_substrate.log_analytics_workspace_id

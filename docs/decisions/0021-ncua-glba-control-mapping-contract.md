@@ -50,7 +50,7 @@ Per ADR 0008 and [ADR 0005](./0005-observability-substrate-and-signal-parity.md)
 
 ### 5. Initiative organization: per-control-family, and mappings live with the policy
 
-Initiatives follow the `ncua-glba` README's shape — grouped by **control family** (a regulator's grouping of related controls) with plain-language names (e.g. `vitruvius-csf-pr-ac` for Identity Management & Access Control). Consistent with [ADR 0003](./0003-modules-ship-policy-and-monitoring.md), a module that ships its own `policy/` initiative declares *its* control mappings right there; the `policies/ncua-glba` bundle is the **aggregation view** across the estate, not the sole home for mappings. The derived map unions both.
+Initiatives follow the `ncua-glba` README's shape — grouped by **control family** (a regulator's grouping of related controls) with plain-language names (e.g. `platform-csf-pr-ac` for Identity Management & Access Control). Consistent with [ADR 0003](./0003-modules-ship-policy-and-monitoring.md), a module that ships its own `policy/` initiative declares *its* control mappings right there; the `policies/ncua-glba` bundle is the **aggregation view** across the estate, not the sole home for mappings. The derived map unions both.
 
 ### 6. The lifecycle is ADR 0008's, unchanged
 

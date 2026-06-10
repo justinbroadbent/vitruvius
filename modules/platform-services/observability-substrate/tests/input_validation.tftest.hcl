@@ -76,3 +76,13 @@ run "rejects_zero_daily_quota" {
 
   expect_failures = [var.log_analytics_daily_quota_gb]
 }
+
+run "rejects_invalid_name_prefix" {
+  command = plan
+
+  variables {
+    name_prefix = "Platform"
+  }
+
+  expect_failures = [var.name_prefix]
+}

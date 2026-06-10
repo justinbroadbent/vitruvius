@@ -50,7 +50,7 @@ resource "terraform_data" "input_invariants" {
 resource "azurerm_policy_definition" "this" {
   for_each = { for k, v in local.policy_definitions : k => v if local.deploy_policy }
 
-  name                = "vitruvius-diag-${each.key}"
+  name                = "${var.name_prefix}-diag-${each.key}"
   policy_type         = "Custom"
   mode                = each.value.mode
   display_name        = each.value.displayName
@@ -63,9 +63,9 @@ resource "azurerm_policy_definition" "this" {
 resource "azurerm_management_group_policy_set_definition" "this" {
   count = local.deploy_policy ? 1 : 0
 
-  name                = "vitruvius-substrate-diagnostic-settings"
+  name                = "${var.name_prefix}-substrate-diagnostic-settings"
   policy_type         = "Custom"
-  display_name        = "Vitruvius — Substrate diagnostic-settings routing (ADR 0005)"
+  display_name        = "${title(var.name_prefix)} — Substrate diagnostic-settings routing (ADR 0005)"
   description         = "Bundles the per-resource-type policies that route diagnostic settings to the platform Log Analytics workspace. Implements ADR 0005's substrate guarantee. Audit-before-Deny lifecycle per ADR 0008: defaults to AuditIfNotExists; promote to DeployIfNotExists once Audit-mode evidence supports it."
   management_group_id = var.policy_management_group_id
 
@@ -102,10 +102,10 @@ resource "azurerm_management_group_policy_set_definition" "this" {
 resource "azurerm_management_group_policy_assignment" "this" {
   count = local.deploy_assignment ? 1 : 0
 
-  name                 = "vitruvius-substrate-diag"
+  name                 = "${var.name_prefix}-substrate-diag"
   management_group_id  = var.policy_assignment_scope
   policy_definition_id = azurerm_management_group_policy_set_definition.this[0].id
-  display_name         = "Vitruvius — Substrate diagnostic-settings"
+  display_name         = "${title(var.name_prefix)} — Substrate diagnostic-settings"
   description          = "Assigns the substrate diagnostic-settings initiative. Per ADR 0008, defaults to DoNotEnforce for the Audit period; promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
   location             = var.policy_assignment_location

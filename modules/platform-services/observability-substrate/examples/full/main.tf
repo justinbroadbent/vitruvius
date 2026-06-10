@@ -29,7 +29,7 @@ module "observability_substrate" {
   log_analytics_daily_quota_gb           = 50
   application_insights_retention_in_days = 365
 
-  action_group_name       = "vitruvius-platform-prod"
+  action_group_name       = "platform-alerts-prod"
   action_group_short_name = "vitruprod"
   alert_email_receivers = [
     {

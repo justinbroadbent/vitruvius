@@ -9,7 +9,7 @@ This module is the canonical implementation of [ADR 0010](../../../docs/decision
 This module has a deliberate split:
 
 1. **Tag-map mode** (default) — produces just the tag map. Suitable for any module or root config that wants the canonical tag map; the policy initiative is assumed to be assigned once at a higher scope.
-2. **Tag-map-plus-policy mode** — when `policy_management_group_id` is supplied, the module also creates the policy definitions, bundles them into the `vitruvius-tag-taxonomy` initiative, and assigns it at that management group.
+2. **Tag-map-plus-policy mode** — when `policy_management_group_id` is supplied, the module also creates the policy definitions, bundles them into the `<name_prefix>-tag-taxonomy` initiative (default prefix `platform`), and assigns it at that management group.
 
 The tag map is always produced; policy is opt-in. This keeps consumers free to invoke this module per-workload for the tag map without duplicating policy assignments.
 
@@ -25,6 +25,7 @@ The tag map is always produced; policy is opt-in. This keeps consumers free to i
 | `app` | string | no | Optional application alias matching a Backstage component. |
 | `component` | string | no | Optional sub-component within an app. |
 | `lifecycle_stage` | string | no | One of `stable`, `experimental`, `deprecated`. Emitted as the `lifecycle` tag key. |
+| `name_prefix` | string | no | Prefix for the policy resource names. Default `platform`. |
 | `policy_management_group_id` | string | no | When supplied, the policy initiative and assignment are created at this MG. When null, the module produces only the tag map. |
 | `policy_enforcement_mode` | string | no | `DoNotEnforce` (default; Audit-mode per ADR 0008) or `Default` after promotion. |
 | `policy_effect` | string | no | `Audit` (default), `Deny`, or `Disabled`. Flows through the initiative's `effect` parameter to every require/allowed-values member. |

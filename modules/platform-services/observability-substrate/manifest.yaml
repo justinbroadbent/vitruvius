@@ -56,14 +56,18 @@ spec:
       type: bool
       required: false
       description: Public-internet query access for the LAW and App Insights. False by default (ADR 0018); operators query via AMPLS-connected network access.
+    - name: name_prefix
+      type: string
+      required: false
+      description: Prefix for the Azure resource names this module creates. Default 'platform'; set to your org short-code if preferred.
     - name: action_group_name
       type: string
       required: false
-      description: Name of the platform action group. Only created when alert_email_receivers is non-empty.
+      description: Platform action group name. Defaults to '<name_prefix>-alerts'.
     - name: action_group_short_name
       type: string
       required: false
-      description: Short name for the action group (Azure 12-char limit). Default 'vitruvius'.
+      description: Action group short name (max 12 chars). Defaults to name_prefix truncated to 12.
     - name: alert_email_receivers
       type: list(object)
       required: false
@@ -105,7 +109,7 @@ spec:
   ships:
     policy: []
     monitoring:
-      - vitruvius-substrate-deletion
+      - substrate-deletion
     runbooks: []
 
   cites:

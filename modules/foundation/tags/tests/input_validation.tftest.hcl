@@ -161,3 +161,18 @@ run "rejects_bare_management_group_name" {
 
   expect_failures = [var.policy_management_group_id]
 }
+
+run "rejects_invalid_name_prefix" {
+  command = plan
+
+  variables {
+    owner                = "platform-team"
+    env                  = "dev"
+    cost_center          = "cc-1001"
+    data_classification  = "internal"
+    business_criticality = "tier-2"
+    name_prefix          = "Platform"
+  }
+
+  expect_failures = [var.name_prefix]
+}

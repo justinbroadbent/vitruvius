@@ -10,6 +10,10 @@ metadata:
 
 spec:
   inputs:
+    - name: name_prefix
+      type: string
+      required: false
+      description: Prefix for the Azure resource names this module creates. Default 'platform'; set to your org short-code if preferred.
     - name: policy_management_group_id
       type: string
       required: false
@@ -71,7 +75,7 @@ spec:
       - service-bus-route-to-substrate
       - app-service-route-to-substrate
       - apim-route-to-substrate
-      - vitruvius-substrate-diagnostic-settings
+      - substrate-diagnostic-settings
     monitoring: []
     runbooks: []
 

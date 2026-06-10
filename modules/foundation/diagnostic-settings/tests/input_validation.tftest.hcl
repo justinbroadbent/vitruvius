@@ -69,3 +69,13 @@ run "rejects_law_id_missing_workspace_segment" {
 
   expect_failures = [var.log_analytics_workspace_id]
 }
+
+run "rejects_invalid_name_prefix" {
+  command = plan
+
+  variables {
+    name_prefix = "Platform"
+  }
+
+  expect_failures = [var.name_prefix]
+}

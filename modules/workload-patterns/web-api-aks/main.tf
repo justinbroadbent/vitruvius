@@ -90,7 +90,7 @@ locals {
     "keyvault-rbac-authorization-required"  = "kv-rbac"
     "keyvault-diagnostic-settings-required" = "kv-diag"
   }
-  initiative_name = "vitruvius-kv-hardening-${var.key_vault_name}"
+  initiative_name = "${var.name_prefix}-kv-hardening-${var.key_vault_name}"
 
   # Member parameters wire to the initiative-level parameters so the
   # Audit→Deny promotion (ADR 0008) is one assignment-time change.
@@ -124,7 +124,7 @@ locals {
 resource "azurerm_policy_definition" "this" {
   for_each = local.policy_definitions
 
-  name         = "vitruvius-${local.policy_short_names[each.key]}-${var.key_vault_name}"
+  name         = "${var.name_prefix}-${local.policy_short_names[each.key]}-${var.key_vault_name}"
   policy_type  = "Custom"
   mode         = each.value.mode
   display_name = "${each.value.displayName} (${var.key_vault_name})"
@@ -136,7 +136,7 @@ resource "azurerm_policy_definition" "this" {
 resource "azurerm_policy_set_definition" "this" {
   name         = local.initiative_name
   policy_type  = "Custom"
-  display_name = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
+  display_name = "${title(var.name_prefix)} — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description  = "Bundles the Key Vault hardening policies that every web-api-aks workload's Key Vault must comply with: purge protection, RBAC authorization, and diagnostic settings to the platform LAW. Audit-before-Deny lifecycle per ADR 0008."
 
   parameters = jsonencode({
@@ -178,7 +178,7 @@ resource "azurerm_subscription_policy_assignment" "this" {
   name                 = local.initiative_name
   subscription_id      = var.policy_assignment_scope
   policy_definition_id = azurerm_policy_set_definition.this.id
-  display_name         = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
+  display_name         = "${title(var.name_prefix)} — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
 
@@ -194,7 +194,7 @@ resource "azurerm_resource_group_policy_assignment" "this" {
   name                 = local.initiative_name
   resource_group_id    = var.policy_assignment_scope
   policy_definition_id = azurerm_policy_set_definition.this.id
-  display_name         = "Vitruvius — web-api-aks Key Vault hardening (${var.key_vault_name})"
+  display_name         = "${title(var.name_prefix)} — web-api-aks Key Vault hardening (${var.key_vault_name})"
   description          = "Assigns the workload-pattern's KV hardening initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
 

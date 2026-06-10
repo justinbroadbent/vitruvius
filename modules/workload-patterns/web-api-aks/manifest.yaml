@@ -63,6 +63,10 @@ spec:
       type: number
       required: false
       description: Soft-delete window in days (7-90).
+    - name: name_prefix
+      type: string
+      required: false
+      description: Prefix for the Azure resource names this module creates. Default 'platform'; set to your org short-code if preferred.
     - name: policy_assignment_scope
       type: string
       required: false

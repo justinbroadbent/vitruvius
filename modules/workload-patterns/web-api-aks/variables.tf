@@ -142,6 +142,17 @@ variable "key_vault_soft_delete_retention_days" {
 
 # --- Policy assignment ---
 
+variable "name_prefix" {
+  type        = string
+  default     = "platform"
+  description = "Prefix for the Azure policy resource names this module creates (definitions, initiative, assignment). Identifies platform-library artifacts in the estate; set it to your org short-code if you prefer."
+
+  validation {
+    condition     = can(regex("^[a-z0-9](-?[a-z0-9])*$", var.name_prefix)) && length(var.name_prefix) >= 2 && length(var.name_prefix) <= 9
+    error_message = "name_prefix must be 2-9 chars: lowercase alphanumeric with single interior hyphens."
+  }
+}
+
 variable "policy_assignment_scope" {
   type        = string
   default     = null

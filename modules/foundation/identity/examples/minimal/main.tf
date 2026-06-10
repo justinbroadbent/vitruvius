@@ -25,7 +25,7 @@ module "tags" {
   data_classification  = "internal"
   business_criticality = "tier-0"
 
-  app = "vitruvius"
+  app = "platform"
 }
 
 module "identity" {

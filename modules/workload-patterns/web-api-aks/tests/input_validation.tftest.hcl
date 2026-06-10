@@ -193,3 +193,13 @@ run "rejects_oversized_federated_credential_name" {
 
   expect_failures = [var.aks_service_account_name]
 }
+
+run "rejects_invalid_name_prefix" {
+  command = plan
+
+  variables {
+    name_prefix = "Platform"
+  }
+
+  expect_failures = [var.name_prefix]
+}
