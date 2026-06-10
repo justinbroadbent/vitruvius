@@ -63,6 +63,15 @@ jobs:
           python-version: '3.12'
       - run: pip install pyyaml jsonschema
       - run: python scripts/validate-manifests.py
+      - name: Regenerate catalog-info.yaml from manifests
+        run: python scripts/generate-catalog-info.py
+      - name: Verify catalog files match manifests
+        run: |
+          if ! git diff --quiet -- 'modules/*/*/catalog-info.yaml'; then
+            echo "::error::catalog-info.yaml drift. Run scripts/generate-catalog-info.py locally and commit the result."
+            git diff -- 'modules/*/*/catalog-info.yaml'
+            exit 1
+          fi
 
   module:
     name: module — ${{ matrix.module }}

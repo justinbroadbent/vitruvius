@@ -58,10 +58,12 @@ vitruvius/
   schemas/
     module-manifest.schema.json  # JSON Schema for every module's manifest.yaml
   scripts/
-    generate-adr-index.ps1  # regenerates docs/decisions/README.md from frontmatter (PowerShell, zero external deps)
+    generate-adr-index.ps1   # regenerates docs/decisions/README.md from frontmatter (PowerShell, zero external deps)
+    validate-manifests.py    # schema + manifest-vs-code coherence for every module (runs in CI)
+    generate-catalog-info.py # regenerates each module's catalog-info.yaml from its manifest (drift-gated in CI)
   .github/
     workflows/
-      ci.yml                # fmt, init, validate, terraform test, ADR index drift check
+      ci.yml                # fmt, validate, terraform test, manifest validation, catalog + ADR index drift checks
     copilot-instructions.md # → AGENTS.md
 ```
 

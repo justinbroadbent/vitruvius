@@ -104,7 +104,7 @@ Until then, the contract above keeps the foundation catalog-ready at zero operat
 - **The org `Group` / `User` hierarchy** — real teams and people are adopter data; we reference `group:<owner>` but do not define the org tree.
 - **`API` and `Resource` entities** — deferred until APIM (ADR 0006) and real deployed instances exist to derive them from.
 - **The adopter-side instance catalog** — deployed workloads are downstream; this ADR catalogs the library, not anyone's running estate.
-- **When the converter is built** — the mapping is decided here; the generator and its CI drift check are a separate work item.
+- ~~**When the converter is built**~~ — *resolved*: the generator (`scripts/generate-catalog-info.py`) and its CI drift check are live; per-module `catalog-info.yaml` files are committed, regenerated, and diff-gated on every PR. The static Domain/System set lives in `docs/catalog/catalog-info.yaml`.
 - **Entity-name collisions at scale** — module names are unique across the repo today; if a future module reuses a name across areas, the generator prefixes with the area. The exact namespacing scheme can firm up when (if) that collision is real.
 
 ## Reversibility

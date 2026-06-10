@@ -1,0 +1,46 @@
+# The static entity set ADR 0016 §3 defines once: the single Domain and one
+# System per module area. Per-module Component entities are GENERATED next to
+# each module by scripts/generate-catalog-info.py — never hand-write those.
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: vitruvius
+  description: The Vitruvius reference platform — a library of decisions and Terraform modules for a regulated financial-services estate on Azure.
+spec:
+  owner: group:platform-team
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: foundation
+  description: Cross-cutting primitives every workload consumes — naming, tags, diagnostic routing, identity.
+spec:
+  owner: group:platform-team
+  domain: vitruvius
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: networking
+  description: Hub-and-spoke network primitives (ADR 0018). No modules ship yet; the hub is the v0.2 build.
+spec:
+  owner: group:platform-team
+  domain: vitruvius
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: platform-services
+  description: Shared central services workloads consume — the observability substrate today; secrets and registry planned.
+spec:
+  owner: group:platform-team
+  domain: vitruvius
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: workload-patterns
+  description: Golden-path application templates — web-api-aks today; event-driven and data patterns planned.
+spec:
+  owner: group:platform-team
+  domain: vitruvius
