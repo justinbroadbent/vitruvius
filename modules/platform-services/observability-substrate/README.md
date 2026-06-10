@@ -68,7 +68,7 @@ module "diagnostic_settings" {
 
 ## Private operation requires an AMPLS (hard prerequisite)
 
-With `internet_ingestion_enabled` / `internet_query_enabled` at their `false` defaults, the workspace and App Insights component accept traffic only over private networking. That path does not exist until the consumer provides an **Azure Monitor Private Link Scope (AMPLS)** wired to the hub's private DNS and private endpoints (ADR 0018) — nothing in this module or the current `modules/networking/` (deferred to v0.2) provisions one. Until then:
+With `internet_ingestion_enabled` / `internet_query_enabled` at their `false` defaults, the workspace and App Insights component accept traffic only over private networking. That path does not exist until an **Azure Monitor Private Link Scope (AMPLS)** wired to private DNS and a private endpoint reaches it — [`networking/hub`](../../networking/hub/) provisions exactly that: pass this module's `log_analytics_workspace_id` and `application_insights_id` into the hub's `ampls_linked_resource_ids`. Without that wiring:
 
 - agents and the collector cannot ingest telemetry, and
 - operators cannot query the workspace from the portal,

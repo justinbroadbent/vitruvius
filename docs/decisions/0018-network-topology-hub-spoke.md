@@ -47,7 +47,7 @@ The `privatelink.*` private-DNS zones — the lookup zones that resolve Azure se
 
 ### 6. Composition is by output data — no networking orchestrator
 
-Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module will expose outputs — hub VNet ID, firewall private IP, private-DNS zone IDs, route-table IDs — and spoke/workload roots consume them at the environment-root boundary. This is the contract the v0.2 `modules/networking` implementation must satisfy (tracked in issue #9). There is no orchestrator module wiring hub to spokes; the consumer does the wiring. Workload patterns accept the relevant outputs as inputs.
+Per [ADR 0004](./0004-composition-by-output-data.md), the `hub` module exposes outputs — hub VNet ID, private-DNS zone IDs, subnet IDs, the AMPLS ID — and spoke/workload roots consume them at the environment-root boundary. The shipped `networking/hub` v0.1 satisfies the non-firewall half of this contract; the firewall surface (firewall private IP, route-table IDs) ships with the v0.2 egress work (issue #9). There is no orchestrator module wiring hub to spokes; the consumer does the wiring. Workload patterns accept the relevant outputs as inputs.
 
 ## What this does not decide
 

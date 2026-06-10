@@ -41,3 +41,25 @@ variable "platform_management_group_id" {
     error_message = "platform_management_group_id must be a full management group resource ID ('/providers/Microsoft.Management/managementGroups/<name>')."
   }
 }
+
+variable "hub_address_space" {
+  type        = list(string)
+  default     = ["10.0.0.0/22"]
+  description = "Hub VNet address space (illustrative). In a real estate this comes from the central, non-overlapping addressing plan (ADR 0018) — the discipline is decided, the numbers are yours."
+
+  validation {
+    condition     = length(var.hub_address_space) > 0 && alltrue([for cidr in var.hub_address_space : can(cidrhost(cidr, 0))])
+    error_message = "hub_address_space must be a non-empty list of valid CIDR blocks."
+  }
+}
+
+variable "hub_private_endpoint_prefixes" {
+  type        = list(string)
+  default     = ["10.0.1.0/24"]
+  description = "Address prefixes for the hub's private-endpoints subnet (illustrative; must sit inside hub_address_space)."
+
+  validation {
+    condition     = alltrue([for cidr in var.hub_private_endpoint_prefixes : can(cidrhost(cidr, 0))])
+    error_message = "hub_private_endpoint_prefixes must be valid CIDR blocks."
+  }
+}

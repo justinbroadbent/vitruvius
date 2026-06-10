@@ -22,7 +22,7 @@ apiVersion: backstage.io/v1alpha1
 kind: System
 metadata:
   name: networking
-  description: Hub-and-spoke network primitives (ADR 0018). No modules ship yet; the hub is the v0.2 build.
+  description: Hub-and-spoke network primitives (ADR 0018) — the hub's decided core ships (VNet, private DNS, AMPLS); egress enforcement is the v0.2 build.
 spec:
   owner: group:platform-team
   domain: vitruvius

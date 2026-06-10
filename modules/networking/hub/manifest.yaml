@@ -1,0 +1,143 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: hub
+  area: networking
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: The hub network's decided core — hub VNet, centralized private DNS zones, and the Azure Monitor Private Link Scope (AMPLS). Egress enforcement (the firewall) is the deferred v0.2 scope.
+
+spec:
+  inputs:
+    - name: virtual_network_name
+      type: string
+      required: true
+      description: Hub VNet name from foundation/naming.
+      semantic: naming-convention
+    - name: resource_group_name
+      type: string
+      required: true
+      description: Consumer-owned resource group (ADR 0004 / ADR 0024).
+    - name: location
+      type: string
+      required: true
+      description: Azure region.
+    - name: tags
+      type: map(string)
+      required: false
+      description: Tag map from foundation/tags (ADR 0010).
+      semantic: tag-taxonomy
+    - name: address_space
+      type: list(string)
+      required: true
+      description: Hub CIDR blocks. The value is the adopter's — centrally assigned and non-overlapping (ADR 0018); no default on purpose.
+    - name: subnets
+      type: map(object)
+      required: false
+      description: Subnets keyed by name. v0.1 consumers typically declare a private-endpoints subnet; Azure-mandated firewall/gateway subnets belong to the deferred v0.2 scope.
+    - name: private_dns_zones
+      type: list(string)
+      required: false
+      description: Zones to create and link to the hub. Default is exactly what the shipped modules require — Key Vault private link plus the five Azure Monitor zones.
+    - name: create_ampls
+      type: bool
+      required: false
+      description: Create the AMPLS the substrate's private posture requires. Disable only when the estate already operates one.
+    - name: ampls_name
+      type: string
+      required: false
+      description: AMPLS name override; defaults to ampls-<virtual_network_name>.
+    - name: ampls_linked_resource_ids
+      type: map(string)
+      required: false
+      description: Azure Monitor resources to scope into the AMPLS — wire the observability substrate's workspace and App Insights IDs here.
+      semantic: substrate-law
+    - name: ampls_ingestion_access_mode
+      type: string
+      required: false
+      description: AMPLS ingestion mode. PrivateOnly by default (ADR 0018 default-deny posture).
+      vocabulary: [Open, PrivateOnly]
+    - name: ampls_query_access_mode
+      type: string
+      required: false
+      description: AMPLS query mode. PrivateOnly by default.
+      vocabulary: [Open, PrivateOnly]
+    - name: ampls_private_endpoint_subnet_key
+      type: string
+      required: false
+      description: Key into subnets naming the subnet that hosts the AMPLS private endpoint. Null skips the endpoint.
+    - name: ampls_private_endpoint_name
+      type: string
+      required: false
+      description: Endpoint name override; defaults to pep-ampls-<virtual_network_name>. Compute via foundation/naming to override.
+
+  outputs:
+    - name: virtual_network_id
+      type: string
+      description: Hub VNet resource ID — the spoke peering surface (ADR 0018 §6).
+    - name: virtual_network_name
+      type: string
+      description: Hub VNet name.
+    - name: address_space
+      type: list(string)
+      description: The hub's address space, echoed for the adopter's addressing records.
+    - name: subnet_ids
+      type: map(string)
+      description: Subnet key to resource ID.
+    - name: private_dns_zone_ids
+      type: map(string)
+      description: Zone name to zone ID. Workload patterns consume these (e.g. web-api-aks private_endpoints).
+    - name: ampls_id
+      type: string
+      description: AMPLS resource ID; null when create_ampls = false.
+    - name: ampls_private_endpoint_id
+      type: string
+      description: AMPLS private endpoint ID; null when no endpoint subnet was named.
+
+  dependencies:
+    avm:
+      - source: Azure/avm-res-network-virtualnetwork/azurerm
+        version: 0.11.0
+      - source: Azure/avm-res-network-privatednszone/azurerm
+        version: 0.3.4
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: true
+    secrets: false
+    networking: true
+    naming: false
+    tagging: false
+
+  ships:
+    policy: []
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - venustas
+    decisions:
+      - ADR-0001
+      - ADR-0004
+      - ADR-0005
+      - ADR-0018
+    anti_patterns:
+      - AP-003
+
+  examples:
+    - name: minimal
+      description: Hub VNet with the default zone set and an AMPLS, no endpoint — the smallest useful hub.
+    - name: full
+      description: Subnets, substrate resources scoped into the AMPLS, and the AMPLS private endpoint wired through the monitor zones.
+
+  tests:
+    - name: input_validation
+      type: terraform_test
+      description: Rejects malformed CIDRs, off-vocabulary access modes, bare resource IDs, and an endpoint subnet key that names no subnet.
+    - name: contract_compliance
+      type: terraform_test
+      description: Confirms the default zone set covers the shipped modules, AMPLS scoping and the endpoint's DNS wiring, and that disabling the AMPLS suppresses all three resource types.

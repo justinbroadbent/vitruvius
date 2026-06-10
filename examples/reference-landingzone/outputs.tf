@@ -28,3 +28,18 @@ output "substrate_routing_initiative_id" {
   value       = module.diagnostic_settings.initiative_id
   description = "The substrate-routing initiative, created at the platform management group."
 }
+
+output "hub_virtual_network_id" {
+  value       = module.hub.virtual_network_id
+  description = "The hub VNet — the surface spoke roots peer to (ADR 0018 §6)."
+}
+
+output "private_dns_zone_ids" {
+  value       = module.hub.private_dns_zone_ids
+  description = "The hub's centralized private DNS zones — workload roots wire these into their private_endpoints inputs."
+}
+
+output "ampls_id" {
+  value       = module.hub.ampls_id
+  description = "The AMPLS the substrate's resources are scoped into."
+}

@@ -42,7 +42,7 @@ vitruvius/
       README.md             # generated index, grouped by category and status
   modules/
     foundation/             # naming, tags, diagnostic-settings, identity
-    networking/             # planned: hub, spoke, private-endpoint patterns
+    networking/             # hub (VNet, private DNS, AMPLS); firewall + spokes planned
     platform-services/      # observability-substrate; planned: secrets, container-registry
     workload-patterns/      # web-api-aks; planned: function-event-driven,
                             # data-pipeline, apim-bff (the SaaS-core integration shape)
@@ -69,7 +69,7 @@ vitruvius/
 
 ## What's runnable today (v0.1.0)
 
-Six modules and one reference composition. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
+Seven modules and two reference compositions. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
 
 | Layer | Module | What it does |
 |---|---|---|
@@ -77,12 +77,13 @@ Six modules and one reference composition. All experimental — module status pe
 | foundation | [`tags`](./modules/foundation/tags/) | Tag taxonomy + the policy initiative that enforces it. |
 | foundation | [`diagnostic-settings`](./modules/foundation/diagnostic-settings/) | Substrate-routing safety-net policy initiative. |
 | foundation | [`identity`](./modules/foundation/identity/) | Platform-baseline managed identities (deliberately minimal). |
+| networking | [`hub`](./modules/networking/hub/) | Hub VNet, centralized private DNS, and the AMPLS. Firewall deferred to v0.2. |
 | platform-services | [`observability-substrate`](./modules/platform-services/observability-substrate/) | The central LAW + App Insights store every module's diagnostics route to. |
 | workload-pattern | [`web-api-aks`](./modules/workload-patterns/web-api-aks/) | Containerized HTTP API on AKS — workload identity, KV via AVM, hardening initiative. |
 
 [`examples/reference-landingzone/`](./examples/reference-landingzone/) wires the modules together end-to-end — the worked demonstration of composition by output data (ADR 0004).
 
-Directories with stub READMEs (`modules/networking/`, `policies/ncua-glba/`, the planned examples) document scope that's been thought through but not yet built.
+Directories with stub READMEs (`policies/ncua-glba`'s full catalog, the planned examples) document scope that's been thought through but not yet built.
 
 See [`AGENTS.md`](./AGENTS.md) for the conventions every new module must follow, and [`modules/foundation/README.md`](./modules/foundation/README.md) for the foundation layer's overview.
 

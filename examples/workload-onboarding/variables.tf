@@ -51,13 +51,13 @@ variable "log_analytics_workspace_id" {
 variable "private_endpoint_subnet_id" {
   type        = string
   default     = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-network-dev/providers/Microsoft.Network/virtualNetworks/vnet-spoke-dev/subnets/snet-private-endpoints"
-  description = "Subnet in the workload's spoke VNet where the Key Vault private endpoint lands. Published by the platform's networking layer (ADR 0018)."
+  description = "Subnet where the Key Vault private endpoint lands. Published by the platform's networking layer (ADR 0018) — a networking/hub subnet_ids output, or the workload spoke's own."
 }
 
 variable "key_vault_dns_zone_id" {
   type        = string
   default     = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-network-hub/providers/Microsoft.Network/privateDnsZones/privatelink.vaultcore.azure.net"
-  description = "The hub's privatelink.vaultcore.azure.net private DNS zone. Centralized in the hub per ADR 0018; published by the platform team."
+  description = "The hub's privatelink.vaultcore.azure.net private DNS zone — networking/hub's private_dns_zone_ids output. Centralized in the hub per ADR 0018."
 }
 
 variable "policy_assignment_scope" {
