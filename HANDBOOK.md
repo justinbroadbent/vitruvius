@@ -17,7 +17,7 @@ Terms are defined the first time they appear. A few you'll see constantly, defin
 - **Platform (as in "platform team").** The internal team that builds the paved roads other engineering teams drive on — shared infrastructure, tooling, and rules, so application teams don't each reinvent them.
 - **Azure.** Microsoft's cloud — rented computing, databases, networking, and hundreds of other services you turn on with code instead of buying hardware.
 - **Terraform.** A tool that lets you describe cloud infrastructure in text files and then creates it for you. This is **infrastructure as code (IaC)**: infrastructure defined in files you can review, version, and re-run, instead of clicked together by hand in a web console.
-- **ADR (Architecture Decision Record).** A short document capturing *one* decision: the situation, the choice, what was deliberately left open, and how hard it would be to reverse. This repository has 21 of them, each written in plain language, and they are the durable asset everything else implements.
+- **ADR (Architecture Decision Record).** A short document capturing *one* decision: the situation, the choice, what was deliberately left open, and how hard it would be to reverse. This repository has twenty-one accepted ones plus one open RFC, each written in plain language, and they are the durable asset everything else implements.
 - **Module.** A reusable building block of Terraform code — a packaged recipe for "a properly configured Key Vault" or "the central logging store" — that anyone can drop into their own configuration.
 
 > **In plain terms:** the repository is a *library of opinions*. The opinions are written down as ADRs (the "why"), implemented as modules (the "how"), and proven by automated checks (the "really?"). An organization can adopt all of it or just the pieces it likes.
@@ -48,7 +48,19 @@ These three pull against each other on purpose. Maximum durability (forbid every
 
 **4. Docs that cannot lie.** Hand-maintained documents drift from the code they describe — silently, until an audit finds it. So the load-bearing documents here are *generated* from structured data and *checked* in CI: the ADR index regenerates from the ADRs' own metadata, every module's spec sheet (its **manifest**) is validated against the module's actual code on every change, and the docs that describe controls distinguish explicitly between "live today" and "planned." A control described as live when it is not is exactly the audit finding this discipline exists to prevent.
 
-**5. Design with engineers, not at them.** Significant decisions ship as **RFCs** — drafts opened for comment — and an architect can propose a decision but cannot approve their own. Patterns earn status (experimental → beta → stable) by being adopted, not by being declared ready. This is the antidote to the deepest failure mode in the catalog: the architect who designs in isolation, swoops in with corrections, and leaves.
+**5. Design with engineers, not at them.** Significant decisions ship as **RFCs** — drafts opened for comment — and an architect can propose a decision but cannot approve their own. Patterns earn status (experimental → beta → stable) by being adopted, not by being declared ready. This is the antidote to the deepest failure mode in the catalog: the architect who designs in isolation, swoops in with corrections, and leaves. The process isn't theoretical: the platform-identity decision (ADR 0019) is open as a draft RFC right now, accumulating comment before anyone is allowed to call it accepted.
+
+## How decisions actually get made here
+
+The convictions say *what* the platform believes; this is *how* it reasons. Every decision starts with one question: **which way does the door swing?**
+
+A **two-way door** is a choice you can walk back — a retention number, a default region, a SKU. Spend little on it, pick a sensible value, move on; being wrong is cheap. A **one-way door** is a choice other things will calcify around — how finely Terraform state is split, the network addressing plan, the manifest's field names, whether modules may call each other. These get the deliberation, the written alternatives, and the RFC period, because being wrong is expensive *later*, when the cost is no longer visible in the decision itself.
+
+The subtle cases are the doors that *change* direction over time, and the ADRs call these out explicitly. Resource names were a two-way door until exemptions and the compliance map started binding to them — so they were genericized the week before that binding began. The no-orchestrator rule is *mechanically* trivial to reverse and *strategically* one-way, because the first orchestrator module attracts the second. Standing read-only access is technically a config flip but culturally a ratchet. Recognizing a door mid-swing — and acting while it's still cheap — is most of the actual work of architecture.
+
+The second habit follows from the first: **when you can't know, don't guess — defer visibly.** Every ADR carries a "What this does not decide" section naming its blanks, so the boundary between "decided" and "your job, later" is always written down rather than discovered. Deferral here is not backlog; it's the deliberate refusal to bake in a guess that would be expensive to dig out. The skill being demonstrated across the whole repository is exactly this discrimination: shapes that are safe to decide now get decided to a high polish, values that would be guesses get labeled blanks with sensible defaults.
+
+And third: **a deferral must name its trigger,** or it's just procrastination with better branding. The Backstage portal waits for a real estate, a dozen-plus entities, and a named operator. The module registry waits for enough consumers that discovery beats a git tag. When a trigger fires, the deferral graduates — the catalog generator and the compliance-map machinery both started as named deferrals and are now running code, which is the system working as designed, not the plan changing.
 
 ## The twelve failure modes
 
@@ -91,8 +103,9 @@ vitruvius/
     workload-patterns/       # web-api-aks (more planned)
     networking/              # planned: hub, spoke, private endpoints (v0.2)
   examples/
-    reference-landingzone/   # the assembler: everything wired together, end to end
-  policies/ncua-glba/        # compliance scaffold — content awaits the compliance partners
+    reference-landingzone/   # the assembler: the platform team's side, wired end to end
+    workload-onboarding/     # the app team's side: consuming the golden path
+  policies/ncua-glba/        # declared control mappings + the generated control map
   schemas/                   # JSON Schema for the module manifests
   scripts/                   # the validators and generators CI runs
   .github/workflows/ci.yml   # the checks (see "What the checks prove")
@@ -131,6 +144,8 @@ flowchart LR
 
 The load-bearing arrow is the last one: the substrate *produces* the central workspace, and the routing policy *enforces* that everything sends logs there — the two halves of the observability decision connected in the open.
 
+The assembler has a mirror image: `examples/workload-onboarding` is the same composition seen from the *app team's* chair — the root a workload team copies into its own repository to consume the golden path, with every platform-published fact arriving as an explicit input and the module pinned by release tag. Together the two examples answer the question that matters most about any platform: not "can the platform team build it?" but "what does it feel like to be its customer?"
+
 ## What the checks prove
 
 Every push runs, in CI:
@@ -138,67 +153,58 @@ Every push runs, in CI:
 - **Format and validity** — `terraform fmt` and `terraform validate` across every module and example.
 - **Tests** — every module's `terraform test` suite (over a hundred assertions across the six), including negative tests that prove the input validation actually rejects what it claims to.
 - **Manifest validation** — every module's manifest parses, validates against the JSON Schema, and **agrees with the module's actual code**: inputs mirror `variables.tf` (names and required-ness, both directions), outputs mirror `outputs.tf`, declared dependencies match what's really used, declared policy and monitoring artifacts actually exist, examples and tests on disk are all declared, and every cited decision and anti-pattern resolves. Every policy JSON is syntax-checked.
+- **Generated views can't drift** — three derived documents are regenerated on every pull request and fail the build if they don't match their source: the ADR index (from the decisions' own metadata), each module's Backstage `catalog-info.yaml` (from its manifest), and the compliance control map (from the declared mappings — which also fails if a mapping references a policy file that no longer exists).
 - **Coverage by construction** — the lists of modules and examples to check are *discovered from the repository*, not hand-maintained, so a new module physically cannot merge without CI coverage.
-- **Index drift** — the ADR index is regenerated and compared; a malformed ADR is a hard failure, not a silent omission.
 
-> **In plain terms:** the spec sheet can't lie about the code, the docs index can't lose a decision, and nothing ships untested — and none of that depends on a human remembering to check.
+> **In plain terms:** the spec sheet can't lie about the code, the catalog can't lie about the modules, the compliance map can't lie about the rules, and nothing ships untested — and none of that depends on a human remembering to check. The interesting demo of each gate is breaking it: rename a policy the control map cites and the build refuses.
 
-**And honestly:** some controls are decided but not yet built — static-analysis scanning, the manifest's softer semantic warnings, the compliance-map generator, the OTel collector deployment, scheduled drift detection. `docs/principles.md` § "How these are enforced" is the canonical live-vs-planned list, and the rule of the house is that audit-facing text never describes a planned control as live.
+The catalog half of this was validated against the real consumer: a throwaway Backstage instance ingested the generated entities — one Domain, four Systems, six Components — with zero schema errors, then was deleted. The claim "point your Backstage at this repo and the catalog populates" is a tested fact, while *operating* a portal still waits for its triggers (ADR 0016).
+
+**And honestly:** some controls are decided but not yet built — static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, scheduled drift detection. `docs/principles.md` § "How these are enforced" is the canonical live-vs-planned list, and the rule of the house is that audit-facing text never describes a planned control as live.
 
 ---
 
 # Part III — Adopting it
 
-This is the user's-manual part. The platform was built to be adopted in pieces or whole; here is the order of operations either way.
+Adoption is where the architecture's thinking gets tested against someone's real estate, so this part is organized around the *reasoning* an adopter needs — the order of operations matters less than understanding why each move is shaped the way it is. (The mechanical walkthroughs live where they belong: `examples/reference-landingzone` for the platform team's side, `examples/workload-onboarding` for the app team's, each with a README that is the actual instruction manual.)
 
-## Step 0 — Decide your posture
+## Adoption is a spectrum, not a commitment
 
-Three valid postures:
+Three postures are equally legitimate, because the layers were built to separate. Take **the opinions only** — the ADRs and anti-pattern catalog as your decision baseline, with your own code underneath; the decisions are the durable asset, and an estate that adopts the reasoning has adopted the architecture. Take **modules à la carte** — `naming` and `tags` earn their keep on day one in any estate, with zero coupling to the rest; that independence isn't an accident, it's ADR 0004 doing its job. Or take **the foundation whole** — copy the assembler, fill in your values, grow from there. The design never punishes partial adoption, because forcing the whole stack is how platforms get routed around (AP-005, AP-010).
 
-1. **Take the opinions only.** Adopt the ADRs and anti-pattern catalog as your decision baseline and write your own code. The decisions are the durable asset; this is a legitimate adoption.
-2. **Take modules à la carte.** Each module stands alone — `naming` and `tags` are useful on day one in any estate, with zero coupling to the rest.
-3. **Take the foundation whole.** Copy the assembler, fill in your values, and grow from there. The rest of Part III assumes this posture.
+## You bring the estate; the platform brings the shape
 
-## Step 1 — Bring your account structure; don't rebuild it
+The deepest adoption question is who owns what, and the answer runs through everything: **Vitruvius attaches to your existing Azure account tree by role; it never owns the tree** (ADR 0024). Modules ask for scopes through a small vocabulary — *the platform management group*, *the environment subscription* — and you hand them real IDs once, at the assembly point. The reasoning: any reference design that ships an account tree is shipping its author's org chart, and the adopter either contorts to fit it or forks it. Attach-by-role sidesteps both. The same reasoning makes **an environment a subscription** — not because Azure requires it, but because a subscription is the cleanest security, billing, and policy boundary Azure offers, and environments are exactly the thing you want cleanly bounded.
 
-Vitruvius **attaches to your existing Azure account tree by role; it does not own the tree.** Modules ask for scopes through a small fixed vocabulary — *the platform management group*, *the environment subscription*, *the workload resource group* — and you hand them the real IDs at the assembly point (ADR 0024). An **environment is a subscription**: dev, staging, and production each get their own account, which gives each a clean security, billing, and policy boundary. If you run Microsoft's standard **Azure Landing Zones** layout, everything here drops onto it; the platform assumes your landing zone already creates subscriptions on demand and consumes that, it doesn't rebuild it.
+> **In plain terms:** the modules say "deploy this to the production environment" the way a job description says "send this to the Head of Finance" — by role, not by employee number.
 
-> **In plain terms:** the modules say "deploy this to the production environment" the way a job description says "send this to the Head of Finance" — by role, not by employee number. You tell them which actual account holds each role, once, in one file.
+Filling in the blanks is deliberately front-loaded and validated: every adopter-supplied value in the assembler fails at *plan time* with an error naming the actual mistake, because a guess that survives until apply costs an afternoon and a guess that dies at plan costs a minute. And the first blank worth thinking hardest about is **state**: Terraform's record of what it built is effectively a secret store, so it's locked like one — and it's **split** per environment and per deployable unit before there's anything in it, because merging state later is an afternoon and splitting it later is surgery (ADR 0017). That asymmetry, not tidiness, is why the reference starts split.
 
-## Step 2 — Copy the assembler and fill in the blanks
+## The prerequisites are stated, not discovered
 
-Copy `examples/reference-landingzone` into your own repository and replace the obviously-fake values: your org short-code, your region, your management group ID. Every input is validated with a real error message at plan time — a bare management-group name, an off-vocabulary environment, a malformed ID all fail *before* anything talks to Azure. Then extend it the same way the example is built: instantiate a module, read its outputs, feed the next.
+A reference design earns trust by what it admits before you hit it. Two admissions matter most here. The substrate is **private by default — which means it doesn't work yet**: nothing can ingest into it or query it until you provide an AMPLS wired to private DNS, and the golden path's Key Vault is reachable only through a private endpoint you supply. The alternative — shipping open defaults that "just work" — is how regulated estates accumulate public endpoints nobody remembers approving. Private-by-default with a *documented* dependency is the honest version: the cost is visible, scheduled, and paid once, instead of discovered in week three or, worse, never.
 
-State — Terraform's memory of what it built — goes in your own Azure Storage, locked like the secret store it effectively is (identity-only access, no shared keys, customer-managed encryption, private networking) and **split** per environment and per deployable unit so one mistake's blast radius is one small unit (ADR 0017). Start split; merging later is easy, splitting later is surgery.
+The network those prerequisites point at is decided but not yet built: hub-and-spoke, default-deny egress through one audited choke point, centrally assigned non-overlapping addresses (ADR 0018, hub module tracked in #9). The addressing discipline is locked in *now*, while it's free, because re-numbering a live network is the truest one-way door in the whole design — the canonical example of acting on a door before it swings shut.
 
-## Step 3 — Face the networking prerequisites early
+## Enforcement is earned, not declared
 
-Two truths the repo tells you plainly rather than letting you discover in week three:
+Every policy bundle follows one lifecycle (ADR 0008): **watch first, block with evidence.** Initiatives ship observing — both the enforcement mode and the effect default safe — and promotion to blocking is a pull request citing what *would* have been blocked, who owns it, and whether the rule caught real problems or noise. Promotion is a single input (`policy_effect = "Deny"`), because a promotion path that requires editing policy JSON is a promotion path nobody takes. Sandbox and dev stay watch-only forever; exemptions are time-boxed, team-attributed, and logged.
 
-- The substrate is **private by default**, which means *nothing can ingest into it or query it* until you provide an **AMPLS** (Azure Monitor Private Link Scope) wired to private DNS and private endpoints. For an evaluation sandbox you may flip the two `internet_*` inputs to `true` — that is the documented escape hatch, not the default.
-- The golden path's Key Vault is reachable **only** through a private endpoint — supply your subnet and private-DNS zone through the `private_endpoints` input, or the workload will hold a role on a vault it cannot reach.
+The reasoning is incentive design, not caution: a blanket ban costs its author nothing and lands its pain on everyone else, which is exactly how engineers end up on unmanaged personal subscriptions. Evidence-gated enforcement reverses the incentive — and the one stated exception (rules protecting the monitoring system block from day one) shows the principle has edges, not just vibes. The estate-wide promotion judgment stays with the platform and security teams; what the modules guarantee is that the lifecycle is *cheap to follow and visible to audit*.
 
-The network itself follows a **hub-and-spoke** design (ADR 0018): a central hub holds the shared services (firewall, private DNS, gateways), every workload lives in a spoke connected only to the hub, all outbound traffic is denied by default and exits through one audited choke point. The *topology and the addressing discipline* are decided; the hub module that implements them is the next major build (tracked as issue #9), and the address ranges are yours — non-overlapping, centrally assigned, written down, because re-numbering a live network is the truest one-way door in the whole design.
+## The pipeline is controls, not a brand
 
-## Step 4 — Turn on policy the disciplined way
+What auditors need from change management is outcomes: who changed what, who approved it, can the author approve themselves, what happens in an emergency. So the decision (ADRs 0007, 0020) fixes the *controls* — read-only production for humans, the reviewed PR as the change record, deploys gated by a non-author approver and promoted environment by environment, OIDC-federated pipeline identity with no stored credentials, an automatic deployment ledger, break-glass that is captured back into code within 24 hours rather than forbidden into the shadows — and treats the CI/CD product as configuration. This repository's own CI is the live partial implementation; the Azure DevOps port is tracked (#5). An adopter with a different pipeline loses nothing, because the controls were never about the vendor.
 
-Every policy bundle in the repo follows one lifecycle (ADR 0008): **watch first, block with evidence.** Deploy the initiative in audit mode (the default — both the enforcement mode and the effect ship safe), let it observe for 30–90 days, then promote with a pull request that cites what it *would* have blocked and who owns those resources. Promotion is a single input on each module (`policy_effect = "Deny"`), not a JSON-editing expedition. Sandbox and dev stay watch-only forever; production blocks once the evidence supports it. Exemptions are first-class: time-boxed, team-attributed, logged.
+## Compliance partners get artifacts, not blank pages
 
-The one exception to watch-first: rules that protect the monitoring system itself are meant to block from day one. Today the substrate ships a detective alert on attempted deletion; the preventive deny is an acknowledged deferral, stated in the module's README.
+The platform's compliance posture rests on a refusal: it will not invent the control catalog alone, because a platform team's solo guess at "which controls matter" produces a map that matches nobody's actual risk (AP-012 in compliance clothing). What it builds instead is the *machine* — every initiative declares the controls it satisfies as framework-qualified data (`csf:PR.AC-1`, `ncua:748-app-a.III.C`), and the control map is generated from those declarations with gaps shown explicitly, never silently (ADR 0021).
 
-## Step 5 — Wire your pipeline to the controls, not the brand
+That machine is now running with exemplar content: `policies/ncua-glba/CONTROL-MAP.md` maps two control families to policies that actually ship, with all three coverage states visible — implemented, manual, and one *declared gap*. The exemplars exist for a specific conversational reason: compliance partners react far better to a concrete claim they can correct than to a blank page they must fill. Each accepted correction becomes a data edit; the map regenerates; CI guarantees it never drifts from the rules it describes. One nuance the content gets right: federally insured credit unions are examined under **NCUA 12 CFR Part 748**, not the FTC's better-known Safeguards Rule — and because identifiers are framework-qualified, even getting *that* wrong would have been a content fix, not a redesign.
 
-The change-management rules (ADR 0007, ADR 0020) are the decision; the CI/CD product is configuration. The rules: humans are read-only in production by default; the reviewed pull request is the change record; a plan runs on every PR but deploys only happen after merge, gated by an approver who isn't the author, promoted dev → staging → production; the pipeline logs in with **OIDC federation** — short-lived tokens, no stored passwords — holding only the access it needs; every deployment writes a **ledger entry** automatically (the audit record *and* the source of the delivery metrics); emergencies go through break-glass and are captured back into code within 24 hours, never forbidden into the shadows.
+## Deviation is data
 
-This repository's own CI (GitHub Actions) is the live partial implementation of those rules; the reference write-up uses Azure DevOps vocabulary and the conversion is tracked (issue #5). Either platform — or another — satisfies the ADR; the controls are what the auditors get.
-
-## Step 6 — Bring your compliance partners in with something concrete
-
-The compliance machinery is built; the compliance *content* is deliberately yours. Every policy initiative declares, as data, which controls it satisfies — framework-qualified identifiers like `csf:PR.AC-1` or `ncua:748-app-a.II` — and the control map and evidence pack are *generated* from those declarations, so they cannot drift from the rules (ADR 0021). What the platform refuses to do is invent the control catalog alone: which controls are in scope, and whether a given policy satisfies an examiner, is your security and compliance partners' call. One important nuance the repo gets right and many don't: for federally insured credit unions, GLBA's safeguards are examined under **NCUA 12 CFR Part 748** — the FTC's better-known Safeguards Rule (16 CFR 314) applies to non-bank institutions. The framework-qualified identifiers make that a content choice, not a redesign.
-
-## Deviating from a golden path
-
-You don't have to fight the platform — you have to document the deviation. Write a short ADR; identify the six cross-cutting concerns you're now carrying yourself (identity, observability, secrets, networking, naming, tagging); show your alternative meets the same audit bar; get sign-off from the platform and security reviewers. Deviations are *feedback about the pattern*, not a team failing — repeated deviations in the same direction mean the pattern should change.
+If a golden path doesn't fit, the contract is documentation, not combat: a short ADR naming the six cross-cutting concerns the team now carries itself, evidence the alternative meets the same audit bar, platform and security sign-off. The design reason: a platform that *forbids* deviation drives it underground where it can't be audited, while a platform that *prices* deviation honestly — you own the hard parts, in writing — keeps the trail visible and learns from it. Repeated deviations in the same direction are treated as the pattern's failure, not the teams': that feedback loop is what keeps golden paths worth paving.
 
 ---
 
@@ -298,7 +304,7 @@ The split that repeats three times (0013, 0014, 0015): **the platform builds the
 | 0021 | Generate the compliance map from the rules so it can't go stale. |
 | 0024 | Attach to the customer's account tree by role; don't reinvent it. |
 
-Numbering is monotonic, not dense: **0019, 0022, and 0023 are reserved slots** for decisions drafted as open RFCs — platform identity and privileged access (#10), customer-managed keys and the secrets platform (#14), and FinOps as a cross-cutting concern (#16). A gap is a seat held for a decision, not a deleted record.
+Numbering is monotonic, not dense: a gap is a seat held for a decision, not a deleted record. **ADR 0019** (platform identity and privileged access — group-based access, just-in-time elevation, break-glass, separation of duties) has graduated from reserved slot to **open draft RFC**, accumulating comment per ADR 0012 before anyone may call it accepted — the collaborative process running in public, not described. **0022** (customer-managed keys and the secrets platform, #14) and **0023** (FinOps as a cross-cutting concern, #16) remain reserved.
 
 ---
 
@@ -306,12 +312,14 @@ Numbering is monotonic, not dense: **0019, 0022, and 0023 are reserved slots** f
 
 This section is easy to mistake for a to-do list. It is the opposite: each item was *deliberately* not built, because building it would have meant guessing about a real organization that isn't known yet. For each: what's decided, what's open, and what would make it time to build.
 
-- **The networking hub module.** The topology, the default-deny posture, and the addressing discipline are decided (ADR 0018), and the module's output contract is written down for the v0.2 implementation (issue #9). The address ranges themselves are the adopter's.
+- **The networking hub module.** The topology, the default-deny posture, and the addressing discipline are decided (ADR 0018), and the module's output contract is written down for the v0.2 implementation (issue #9). The address ranges themselves are the adopter's. The control map declares the resulting enforcement gap (`csf:PR.AC-5`) explicitly rather than hiding it — the deferral and the compliance story tell one consistent truth.
 - **The OTel collector deployment.** The most load-bearing unbuilt artifact in the observability story — the substrate it writes into is real; the collector runs on application compute and lands with the first workload that needs it.
-- **The Backstage portal.** The catalog *contract* is decided: each module's catalog entry generates from its manifest, so the catalog can't rot (ADR 0016, generator tracked in #12). The running portal waits for real triggers — an estate to catalog, enough services that a portal beats a spreadsheet, someone assigned to operate it.
-- **The compliance control catalog.** The mapping contract and generation machinery are decided (ADR 0021); the catalog content — which controls, satisfied by which policies, under which GLBA regime — belongs to the security and compliance partners (scaffold tracked in #13).
-- **Platform identity and privileged access** (reserved as ADR 0019, issue #10), **customer-managed keys and the secrets platform** (ADR 0022, #14), **FinOps as a cross-cutting concern** (ADR 0023, #16), and the **AKS cluster baseline** the golden path consumes — each is a real decision that deserves its own RFC, not a paragraph smuggled into someone else's.
+- **The Backstage portal — but no longer the catalog.** The generator shipped, and the contract was validated against a real Backstage instance (it ingested everything cleanly, then was deleted). What remains deferred is exactly what should be: *operating* a portal, which waits for an estate to catalog, enough services that a portal beats a spreadsheet, and a named operator.
+- **The compliance control catalog — but no longer the machine.** The generator and drift gate run in CI, and two exemplar control families ship as concrete claims. What remains deferred is the *content* judgment — which controls, satisfied by which policies, to which examiner's standard — because that belongs to the security and compliance partners (#13), and a platform team answering it alone is the seagull trap in compliance clothing.
+- **Decisions still in flight.** Platform identity and privileged access is now an open RFC (ADR 0019, #10) rather than a reserved number; **customer-managed keys and the secrets platform** (ADR 0022, #14), **FinOps as a cross-cutting concern** (ADR 0023, #16), and the **AKS cluster baseline** the golden path consumes each still deserve their own RFC, not a paragraph smuggled into someone else's.
 - **All the concrete real-world values.** Account IDs, address ranges, regions, retention numbers per environment, every team's reliability and recovery targets — labeled blanks with sensible defaults, because the real environment is unknown and guesses age into liabilities.
+
+Notice the pattern in the first four bullets: deferrals here don't just sit — they *graduate* when their triggers fire. The catalog generator and the compliance machine were both named deferrals in earlier versions of this very section; both are now running code, and what remains deferred in each is precisely the part whose trigger hasn't fired. That's the deferral discipline working as designed.
 
 > **In plain terms:** a reference design that *pretended* to know your network ranges, compliance catalog, and CI vendor would be worse, not more finished — it would be full of confident guesses that are probably wrong and expensive to undo. Knowing the difference between "a shape safe to decide now" and "a value I'd only be guessing at" is the discipline this whole repository exists to demonstrate. The deferrals *are* the architecture.
 
@@ -321,7 +329,7 @@ This section is easy to mistake for a to-do list. It is the opposite: each item 
 
 ## The two-minute pitch
 
-> Vitruvius is a reference platform foundation for a regulated financial institution on Azure. Three ideas carry it. First, every opinion is a written decision record that says *why* and what it deliberately leaves open — twenty-one of them, in plain language anyone on the team can read. Second, the boring-but-critical cross-cutting work — security rules, monitoring, secret handling — is built *into* every building block, not bolted on later by another team. Third, it decides the *shapes and rules* and leaves the *specific values* to the adopter, because their real environment isn't known yet. Concretely: Terraform on the vetted AVM catalog; six tested modules that snap together by passing outputs into inputs, never through a master module; monitoring in one open format so the vendor is a setting; rules that watch before they block; temporary identities instead of stored passwords; change managed entirely through reviewed code with an automatic audit trail; and a compliance map generated from the rules so it cannot go stale. The spec sheet of every module is validated against its actual code on every change — the documentation physically can't drift. And the parts that touch the real company — network ranges, the account tree, the control catalog — are labeled blanks, on purpose.
+> Vitruvius is a reference platform foundation for a regulated financial institution on Azure. Three ideas carry it. First, every opinion is a written decision record that says *why* and what it deliberately leaves open — twenty-one accepted and one in open RFC, in plain language anyone on the team can read. Second, the boring-but-critical cross-cutting work — security rules, monitoring, secret handling — is built *into* every building block, not bolted on later by another team. Third, it decides the *shapes and rules* and leaves the *specific values* to the adopter, because their real environment isn't known yet. Concretely: Terraform on the vetted AVM catalog; six tested modules that snap together by passing outputs into inputs, never through a master module — with worked examples of both sides, the platform team's assembly and the app team's onboarding; monitoring in one open format so the vendor is a setting; rules that watch before they block; temporary identities instead of stored passwords; change managed entirely through reviewed code with an automatic audit trail. And the documentation physically can't drift: the spec sheets are validated against the code, the service catalog generates from the spec sheets — verified against a real Backstage — and the compliance map generates from the rules, with CI refusing any of them stale. The parts that touch the real company — network ranges, the account tree, the control catalog — are labeled blanks, on purpose.
 
 ## The hard questions, answered
 
@@ -333,7 +341,9 @@ This section is easy to mistake for a to-do list. It is the opposite: each item 
 
 **"You're a credit union — where's PCI? And is your GLBA mapping right?"** PCI is explicitly out of scope, not half-done. And the mapping contract is regime-aware: federally insured credit unions are examined under NCUA 12 CFR 748 — the FTC Safeguards Rule everyone googles first applies to non-bank lenders. Which regime, and which controls, is declared data supplied by the compliance partners; the generated map keeps it current either way.
 
-**"What stops the docs from rotting like every other wiki?"** The load-bearing docs aren't prose anyone maintains — they're generated and checked. The ADR index regenerates from the decisions themselves; each module's spec sheet is machine-validated against its real inputs, outputs, artifacts, and citations on every pull request; the compliance map generates from rule declarations. The remaining prose follows one rule, enforced by review: never describe a planned control as live.
+**"What stops the docs from rotting like every other wiki?"** The load-bearing docs aren't prose anyone maintains — they're generated and checked, in three places. The ADR index regenerates from the decisions themselves; the Backstage catalog generates from each module's machine-validated spec sheet; the compliance control map generates from the rules' declared mappings — and CI fails the build if any of the three drifts, or if a mapping references a policy that no longer exists. The best proof is destructive: edit the control map by hand or delete a policy it cites, and the build refuses. The remaining prose follows one rule, enforced by review: never describe a planned control as live.
+
+**"How do application teams actually consume this?"** From their own repository: a team copies the onboarding example as its environment root, pins the pattern module by release tag, and receives the platform's published facts — workspace ID, cluster issuer, subnet — as explicit inputs, never by reading platform state. Upgrades are deliberate PRs that bump the tag. A private module registry is the v0.2+ shape, gated on the same trigger discipline as the portal: it changes the source string and nothing else, so deferring it costs nothing.
 
 **"What's the single most important idea?"** Decide the contract; defer the specifics. Everything else — attach by role, generate the catalog, swap the CI vendor, teams own their numbers — is that one idea applied somewhere new. It's what lets a reference design be genuinely useful before the real environment exists, without painting anyone into a corner.
 
