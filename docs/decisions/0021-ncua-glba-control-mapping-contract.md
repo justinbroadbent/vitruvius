@@ -59,7 +59,7 @@ Control-mapped policies still go audit-before-deny, still run tiered (sandbox/de
 ## What this does not decide
 
 - **The actual control catalog** — which NIST CSF subcategories and safeguards sections are in scope, and which Azure Policy implements each, is the security/compliance-partner conversation the `ncua-glba` README flags as the blocker. That conversation also confirms the applicable GLBA regime (NCUA 12 CFR 748 vs. FTC 16 CFR 314 — see Context).
-- **The map generator and its CI drift check** — §2 specifies that the map is derived and drift-checked; building the generator and wiring the check are follow-up work, not yet live.
+- ~~**The map generator and its CI drift check**~~ — *resolved*: `scripts/generate-control-map.py` derives `policies/ncua-glba/CONTROL-MAP.md` from the declared mappings and CI fails on drift or on a mapping that references a policy that no longer exists. The *content* — the full accepted catalog — remains the partners' (first bullet).
 - **The exact schema/manifest field** that carries the mappings — the shape is named here; the JSON Schema change to `module-manifest.schema.json` (and any `ncua-glba` initiative-metadata format) is a follow-up.
 - **The evidence-pack generator and the auditor artifact format** — deferred, concept-first.
 - **Whether a given policy satisfies a control to an examiner's standard** — that is the compliance partner's and the auditor's call, not a platform-team assertion. The contract records the *claim*; acceptance is external.

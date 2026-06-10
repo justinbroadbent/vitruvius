@@ -37,7 +37,7 @@ A module is elegant when reading it teaches you something and editing it doesn't
 
 ## How these are enforced
 
-**Today**, CI runs `terraform fmt -check`, `terraform validate`, and `terraform test` per module and example (the module/example lists are discovered from the filesystem, so new ones cannot merge uncovered), an ADR-index drift check, and manifest validation — every `manifest.yaml` is checked against `schemas/module-manifest.schema.json` and cross-checked against the module's actual code for parity (ADR 0011), every `policy/*.json` is syntax-checked, and every `catalog-info.yaml` is regenerated from its manifest with a drift gate (ADR 0016). That is the full set of automated gates currently wired — see the pipeline definition.
+**Today**, CI runs `terraform fmt -check`, `terraform validate`, and `terraform test` per module and example (the module/example lists are discovered from the filesystem, so new ones cannot merge uncovered), an ADR-index drift check, and manifest validation — every `manifest.yaml` is checked against `schemas/module-manifest.schema.json` and cross-checked against the module's actual code for parity (ADR 0011), every `policy/*.json` is syntax-checked, every `catalog-info.yaml` is regenerated from its manifest with a drift gate (ADR 0016), and the compliance control map is regenerated from its declared mappings with the same gate (ADR 0021). That is the full set of automated gates currently wired — see the pipeline definition.
 
 **Planned** (not yet wired; do not describe as live in audit-facing material until they are):
 

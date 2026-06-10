@@ -72,6 +72,15 @@ jobs:
             git diff -- 'modules/*/*/catalog-info.yaml'
             exit 1
           fi
+      - name: Regenerate control map from declared mappings
+        run: python scripts/generate-control-map.py
+      - name: Verify control map matches mappings
+        run: |
+          if ! git diff --quiet -- policies/ncua-glba/CONTROL-MAP.md; then
+            echo "::error::CONTROL-MAP.md drift. Run scripts/generate-control-map.py locally and commit the result."
+            git diff -- policies/ncua-glba/CONTROL-MAP.md
+            exit 1
+          fi
 
   module:
     name: module — ${{ matrix.module }}
