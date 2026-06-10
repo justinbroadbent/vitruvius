@@ -27,6 +27,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 | [0016](0016-software-catalog-and-backstage-contract.md) | Software catalog contract — manifests are the source; Backstage is a derived view | accepted | foundation, integration, ai | 2026-06-02 |
 | [0017](0017-terraform-state-and-backend.md) | Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact | accepted | foundation, infrastructure, security | 2026-06-08 |
 | [0018](0018-network-topology-hub-spoke.md) | Network topology is hub-spoke with default-deny egress and centralized private DNS | accepted | networking, foundation, security | 2026-06-08 |
+| [0019](0019-platform-identity-and-privileged-access.md) | Platform identity and privileged access — groups, just-in-time elevation, break-glass | proposed | foundation, security, governance | 2026-06-09 |
 | [0020](0020-cicd-azure-devops-pipelines.md) | CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger | accepted | process, infrastructure, governance | 2026-06-08 |
 | [0021](0021-ncua-glba-control-mapping-contract.md) | Compliance control mapping is declared data; the control map is a derived view | accepted | security, governance, compliance | 2026-06-08 |
 | [0024](0024-landing-zone-binding-and-scope-vocabulary.md) | Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own | accepted | foundation, architecture, governance | 2026-06-08 |
@@ -67,6 +68,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
 - [0017](0017-terraform-state-and-backend.md) — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
 - [0018](0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS
+- [0019](0019-platform-identity-and-privileged-access.md) — Platform identity and privileged access — groups, just-in-time elevation, break-glass
 - [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
 
 ### governance
@@ -78,6 +80,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0013](0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame
 - [0014](0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
+- [0019](0019-platform-identity-and-privileged-access.md) — Platform identity and privileged access — groups, just-in-time elevation, break-glass
 - [0020](0020-cicd-azure-devops-pipelines.md) — CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 - [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
@@ -119,6 +122,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 - [0017](0017-terraform-state-and-backend.md) — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
 - [0018](0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS
+- [0019](0019-platform-identity-and-privileged-access.md) — Platform identity and privileged access — groups, just-in-time elevation, break-glass
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 
 ## By status
@@ -146,3 +150,7 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0020](0020-cicd-azure-devops-pipelines.md) — CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
 - [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+
+### proposed (1)
+
+- [0019](0019-platform-identity-and-privileged-access.md) — Platform identity and privileged access — groups, just-in-time elevation, break-glass
