@@ -22,7 +22,7 @@ Aggregation initiative (planned, issue #13): `platform-csf-pr-ac`
 | `csf:PR.AC-4`<br>`ncua:748-app-a.III.C` | Access permissions and authorizations are managed, incorporating the principles of least privilege and separation of duties | 📋 manual | — | PR review records (the change record per ADR 0007); automated evidence pending ADR 0019. |
 | | *Least-privilege role design is enforced at PR review (AGENTS.md firmitas rule); separation of duties (plan vs apply vs approve) and the automated enforcement of both are the subject of ADR 0019, in RFC (issue #10).* | | | |
 | `csf:PR.AC-5`<br>`ncua:748-app-a.III.C` | Network integrity is protected (e.g., network segregation, network segmentation) | ⛔ unimplemented (declared gap) | — | n/a (gap) |
-| | *The topology is decided — hub-and-spoke, default-deny egress, spokes never peer to each other (ADR 0018) — and the workload Key Vault is already private-endpoint-only, but the enforcing hub module is the v0.2 build (issue #9). Declared as an open gap, not silently omitted (ADR 0021 §3).* | | | |
+| | *Partially closed: networking/hub ships the segmentation plumbing — hub VNet, centralized private DNS, AMPLS — and the workload Key Vault is private-endpoint-only. The control stays a declared gap because default-deny egress is not yet enforced: the firewall is the v0.2 build (issue #9). Not silently omitted (ADR 0021 §3).* | | | |
 
 ## Protective Technology — audit logging (`pr-pt`)
 

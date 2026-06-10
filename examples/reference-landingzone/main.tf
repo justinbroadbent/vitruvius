@@ -91,3 +91,29 @@ module "diagnostic_settings" {
   log_analytics_workspace_id = module.observability_substrate.log_analytics_workspace_id
   policy_assignment_location = var.location
 }
+
+# The hub network's decided core (ADR 0018): hub VNet, centralized private
+# DNS, and the AMPLS that makes the substrate's private-by-default posture
+# actually work — the substrate's IDs are scoped in right here, in the open.
+# Egress enforcement (the firewall) is the v0.2 build (issue #9).
+
+module "hub" {
+  source = "../../modules/networking/hub"
+
+  virtual_network_name = module.naming.names.virtual_network
+  resource_group_name  = azurerm_resource_group.platform.name
+  location             = var.location
+  tags                 = module.tags.tags
+  address_space        = var.hub_address_space
+
+  subnets = {
+    private-endpoints = { address_prefixes = var.hub_private_endpoint_prefixes }
+  }
+
+  ampls_linked_resource_ids = {
+    law  = module.observability_substrate.log_analytics_workspace_id
+    appi = module.observability_substrate.application_insights_id
+  }
+  ampls_private_endpoint_subnet_key = "private-endpoints"
+  ampls_private_endpoint_name       = module.naming.names.private_endpoint
+}

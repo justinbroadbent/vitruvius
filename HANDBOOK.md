@@ -101,7 +101,7 @@ vitruvius/
     foundation/              # naming, tags, diagnostic-settings, identity
     platform-services/       # observability-substrate (more planned)
     workload-patterns/       # web-api-aks (more planned)
-    networking/              # planned: hub, spoke, private endpoints (v0.2)
+    networking/              # hub (VNet, private DNS, AMPLS); firewall + spokes v0.2
   examples/
     reference-landingzone/   # the assembler: the platform team's side, wired end to end
     workload-onboarding/     # the app team's side: consuming the golden path
@@ -184,7 +184,7 @@ Filling in the blanks is deliberately front-loaded and validated: every adopter-
 
 A reference design earns trust by what it admits before you hit it. Two admissions matter most here. The substrate is **private by default — which means it doesn't work yet**: nothing can ingest into it or query it until you provide an AMPLS wired to private DNS, and the golden path's Key Vault is reachable only through a private endpoint you supply. The alternative — shipping open defaults that "just work" — is how regulated estates accumulate public endpoints nobody remembers approving. Private-by-default with a *documented* dependency is the honest version: the cost is visible, scheduled, and paid once, instead of discovered in week three or, worse, never.
 
-The network those prerequisites point at is decided but not yet built: hub-and-spoke, default-deny egress through one audited choke point, centrally assigned non-overlapping addresses (ADR 0018, hub module tracked in #9). The addressing discipline is locked in *now*, while it's free, because re-numbering a live network is the truest one-way door in the whole design — the canonical example of acting on a door before it swings shut.
+The network those prerequisites point at is now half-built, along the line the decision drew: `networking/hub` ships the *decided core* — the hub VNet, the centralized private DNS zones (whose default list is exactly what the shipped modules require), and the AMPLS itself, with the substrate's resources scoped in. What it deliberately does **not** ship is the firewall: product, SKU, and rule shape are decisions that would be made blind today and reversed when a real estate's egress requirements exist (#9). Until then default-deny egress is unenforced, and the control map says so out loud. The addressing discipline, meanwhile, is locked in *now*, while it's free, because re-numbering a live network is the truest one-way door in the whole design.
 
 ## Enforcement is earned, not declared
 
@@ -312,7 +312,7 @@ Numbering is monotonic, not dense: a gap is a seat held for a decision, not a de
 
 This section is easy to mistake for a to-do list. It is the opposite: each item was *deliberately* not built, because building it would have meant guessing about a real organization that isn't known yet. For each: what's decided, what's open, and what would make it time to build.
 
-- **The networking hub module.** The topology, the default-deny posture, and the addressing discipline are decided (ADR 0018), and the module's output contract is written down for the v0.2 implementation (issue #9). The address ranges themselves are the adopter's. The control map declares the resulting enforcement gap (`csf:PR.AC-5`) explicitly rather than hiding it — the deferral and the compliance story tell one consistent truth.
+- **The firewall — but no longer the hub.** `networking/hub` now ships the decided core (hub VNet, centralized private DNS, the AMPLS) and the non-firewall half of ADR 0018 §6's output contract. What stays deferred is egress *enforcement*: firewall product, SKU, and rule shape wait for a real estate's requirements (issue #9), and the control map declares the resulting `csf:PR.AC-5` gap explicitly rather than hiding it — the deferral and the compliance story tell one consistent truth.
 - **The OTel collector deployment.** The most load-bearing unbuilt artifact in the observability story — the substrate it writes into is real; the collector runs on application compute and lands with the first workload that needs it.
 - **The Backstage portal — but no longer the catalog.** The generator shipped, and the contract was validated against a real Backstage instance (it ingested everything cleanly, then was deleted). What remains deferred is exactly what should be: *operating* a portal, which waits for an estate to catalog, enough services that a portal beats a spreadsheet, and a named operator.
 - **The compliance control catalog — but no longer the machine.** The generator and drift gate run in CI, and two exemplar control families ship as concrete claims. What remains deferred is the *content* judgment — which controls, satisfied by which policies, to which examiner's standard — because that belongs to the security and compliance partners (#13), and a platform team answering it alone is the seagull trap in compliance clothing.
@@ -329,7 +329,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 ## The two-minute pitch
 
-> Vitruvius is a reference platform foundation for a regulated financial institution on Azure. Three ideas carry it. First, every opinion is a written decision record that says *why* and what it deliberately leaves open — twenty-one accepted and one in open RFC, in plain language anyone on the team can read. Second, the boring-but-critical cross-cutting work — security rules, monitoring, secret handling — is built *into* every building block, not bolted on later by another team. Third, it decides the *shapes and rules* and leaves the *specific values* to the adopter, because their real environment isn't known yet. Concretely: Terraform on the vetted AVM catalog; six tested modules that snap together by passing outputs into inputs, never through a master module — with worked examples of both sides, the platform team's assembly and the app team's onboarding; monitoring in one open format so the vendor is a setting; rules that watch before they block; temporary identities instead of stored passwords; change managed entirely through reviewed code with an automatic audit trail. And the documentation physically can't drift: the spec sheets are validated against the code, the service catalog generates from the spec sheets — verified against a real Backstage — and the compliance map generates from the rules, with CI refusing any of them stale. The parts that touch the real company — network ranges, the account tree, the control catalog — are labeled blanks, on purpose.
+> Vitruvius is a reference platform foundation for a regulated financial institution on Azure. Three ideas carry it. First, every opinion is a written decision record that says *why* and what it deliberately leaves open — twenty-one accepted and one in open RFC, in plain language anyone on the team can read. Second, the boring-but-critical cross-cutting work — security rules, monitoring, secret handling — is built *into* every building block, not bolted on later by another team. Third, it decides the *shapes and rules* and leaves the *specific values* to the adopter, because their real environment isn't known yet. Concretely: Terraform on the vetted AVM catalog; seven tested modules that snap together by passing outputs into inputs, never through a master module — with worked examples of both sides, the platform team's assembly and the app team's onboarding; monitoring in one open format so the vendor is a setting; rules that watch before they block; temporary identities instead of stored passwords; change managed entirely through reviewed code with an automatic audit trail. And the documentation physically can't drift: the spec sheets are validated against the code, the service catalog generates from the spec sheets — verified against a real Backstage — and the compliance map generates from the rules, with CI refusing any of them stale. The parts that touch the real company — network ranges, the account tree, the control catalog — are labeled blanks, on purpose.
 
 ## The hard questions, answered
 
@@ -367,7 +367,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **ALZ (Azure Landing Zones).** Microsoft's standard blueprint for organizing an Azure account tree. Vitruvius plugs into it rather than replacing it.
 
-**AMPLS (Azure Monitor Private Link Scope).** The construct that lets monitoring data flow over private networking. A hard prerequisite for the substrate's private-by-default posture; the adopter provides it.
+**AMPLS (Azure Monitor Private Link Scope).** The construct that lets monitoring data flow over private networking. A hard prerequisite for the substrate's private-by-default posture; `networking/hub` provisions it and scopes the substrate's resources into it.
 
 **Application Insights.** Azure's application-performance monitoring service — response times, failures, request traces.
 

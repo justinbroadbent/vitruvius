@@ -44,7 +44,7 @@ control_families:
         title: Network integrity is protected (e.g., network segregation, network segmentation)
         also: [ncua:748-app-a.III.C]
         status: unimplemented
-        note: "The topology is decided — hub-and-spoke, default-deny egress, spokes never peer to each other (ADR 0018) — and the workload Key Vault is already private-endpoint-only, but the enforcing hub module is the v0.2 build (issue #9). Declared as an open gap, not silently omitted (ADR 0021 §3)."
+        note: "Partially closed: networking/hub ships the segmentation plumbing — hub VNet, centralized private DNS, AMPLS — and the workload Key Vault is private-endpoint-only. The control stays a declared gap because default-deny egress is not yet enforced: the firewall is the v0.2 build (issue #9). Not silently omitted (ADR 0021 §3)."
 
   - id: pr-pt
     name: Protective Technology — audit logging
