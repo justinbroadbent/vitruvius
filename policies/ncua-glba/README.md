@@ -2,16 +2,22 @@
 
 Azure Policy as code mapped to the controls a credit union's regulators care about: the relevant NIST Cybersecurity Framework (CSF) subcategories and the GLBA Safeguards Rule sections.
 
-**Status: deferred. Needs deliberate work with security and compliance partners.**
+**Status: scaffold shipped; catalog content needs the security and compliance partners.**
+
+What ships today:
+
+- [`mappings.yaml`](./mappings.yaml) — the declared control mappings (ADR 0021 §1): two exemplar control families mapping framework-qualified identifiers (`csf:PR.AC-1`, `ncua:748-app-a.III.C`) to policies the repo already ships, with all three coverage statuses represented — implemented, manual, and an explicitly declared gap.
+- [`CONTROL-MAP.md`](./CONTROL-MAP.md) — **generated** from the mappings by `scripts/generate-control-map.py` and drift-checked in CI. A mapping that references a policy file that doesn't exist fails the build. Never edit the map by hand.
+- Every mapping is a *claim, pending partner acceptance* — the exemplars exist to give the partner conversation something concrete to react to instead of a blank page.
 
 What this bundle will eventually contain:
 
 - Per-control-family initiatives, each grouping the Azure Policy definitions that map to that family.
-- A control map — for each NIST CSF subcategory (`PR.AC-1`, `DE.CM-7`, etc.) and each GLBA Safeguards section, the specific policies that implement evidence collection.
+- The full control catalog across all in-scope families, accepted by the compliance partners.
 - Audit-mode tier defaults aligned with [ADR 0008](../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md).
 - An evidence-pack generator concept (deferred, likely lives in `concepts/` first) — auditor-facing artifacts produced from policy-evaluation telemetry.
 
-What's blocking:
+What's blocking the full catalog:
 
 - The control map is a security/compliance team conversation, not a platform-team unilateral exercise. Inventing it without those partners produces controls that don't match the org's actual risk posture or audit expectations.
 - The mapping between NIST CSF and GLBA Safeguards is well-documented externally (NCUA letter to credit unions, NIST mappings), but the **specific** Azure Policy implementations for each control require auditor-side acceptance to be useful.

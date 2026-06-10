@@ -1,0 +1,73 @@
+# Declared control mappings (ADR 0021 §1). This file is the SOURCE;
+# CONTROL-MAP.md is GENERATED from it by scripts/generate-control-map.py and
+# drift-checked in CI — never edit the map by hand.
+#
+# Every mapping here is a CLAIM, pending security/compliance-partner
+# acceptance (ADR 0021: "the contract records the claim; acceptance is
+# external"). The two families below are exemplars that map controls to
+# policies the repo already ships — concrete material for the partner
+# conversation, not a finished catalog. Control identifiers are
+# framework-qualified so the applicable GLBA regime (NCUA 12 CFR 748 for
+# federally insured credit unions) is a content choice, not a schema change.
+
+frameworks:
+  csf:
+    name: NIST Cybersecurity Framework 1.1
+  ncua:
+    name: NCUA 12 CFR Part 748, Appendix A (Guidelines for Safeguarding Member Information)
+
+control_families:
+  - id: pr-ac
+    name: Identity Management & Access Control
+    initiative: platform-csf-pr-ac # the future aggregation initiative for this family (issue #13)
+    controls:
+      - id: csf:PR.AC-1
+        title: Identities and credentials are issued, managed, verified, revoked, and audited for authorized devices, users and processes
+        also: [ncua:748-app-a.III.C]
+        status: implemented
+        implemented_by:
+          - module: workload-patterns/web-api-aks
+            policy: keyvault-rbac-authorization-required
+            note: Key Vault access goes through Azure RBAC, not legacy access policies — unified, auditable, PIM-eligible.
+          - module: foundation/identity
+            note: Managed-identity primitives — no static credentials exist to issue, rotate, or revoke (ADR 0009).
+        evidence: Azure Policy compliance state for the KV-hardening initiative plus Entra ID sign-in/audit logs, surfaced through the observability substrate (ADR 0005).
+
+      - id: csf:PR.AC-4
+        title: Access permissions and authorizations are managed, incorporating the principles of least privilege and separation of duties
+        also: [ncua:748-app-a.III.C]
+        status: manual
+        note: "Least-privilege role design is enforced at PR review (AGENTS.md firmitas rule); separation of duties (plan vs apply vs approve) and the automated enforcement of both are the subject of ADR 0019, in RFC (issue #10)."
+        evidence: PR review records (the change record per ADR 0007); automated evidence pending ADR 0019.
+
+      - id: csf:PR.AC-5
+        title: Network integrity is protected (e.g., network segregation, network segmentation)
+        also: [ncua:748-app-a.III.C]
+        status: unimplemented
+        note: "The topology is decided — hub-and-spoke, default-deny egress, spokes never peer to each other (ADR 0018) — and the workload Key Vault is already private-endpoint-only, but the enforcing hub module is the v0.2 build (issue #9). Declared as an open gap, not silently omitted (ADR 0021 §3)."
+
+  - id: pr-pt
+    name: Protective Technology — audit logging
+    initiative: platform-csf-pr-pt
+    controls:
+      - id: csf:PR.PT-1
+        title: Audit/log records are determined, documented, implemented, and reviewed in accordance with policy
+        also: [ncua:748-app-a.III.C]
+        status: implemented
+        implemented_by:
+          - module: foundation/diagnostic-settings
+            policy: keyvault-route-to-substrate
+          - module: foundation/diagnostic-settings
+            policy: aks-route-to-substrate
+          - module: foundation/diagnostic-settings
+            policy: service-bus-route-to-substrate
+          - module: foundation/diagnostic-settings
+            policy: app-service-route-to-substrate
+          - module: foundation/diagnostic-settings
+            policy: apim-route-to-substrate
+          - module: workload-patterns/web-api-aks
+            policy: keyvault-diagnostic-settings-required
+            note: Pattern-level check that the vault's audit logs route to the platform workspace specifically.
+          - module: platform-services/observability-substrate
+            note: The central Log Analytics workspace the logs land in, with a deletion alert guarding the store itself (ADR 0008 §3 — preventive deny is a stated deferral).
+        evidence: Azure Policy compliance state for the substrate-routing initiative; Log Analytics ingestion by resource type; the substrate-deletion activity-log alert.
