@@ -52,6 +52,7 @@ Layout under `modules/<area>/<name>/`:
 ```
 <name>/
   manifest.yaml        # structured contract — see ADR 0011 and schemas/module-manifest.schema.json
+  catalog-info.yaml    # GENERATED from manifest.yaml (scripts/generate-catalog-info.py) — never edit
   README.md            # purpose, inputs, outputs, composition, gotchas (human-readable)
   AGENTS.md            # AI-specific notes: anti-patterns, common compositions
   main.tf
