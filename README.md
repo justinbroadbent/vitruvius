@@ -4,6 +4,8 @@ A starter platform-architecture library for a regulated financial-services organ
 
 Named for [Vitruvius](https://en.wikipedia.org/wiki/Vitruvius), the Roman architect whose three principles — *firmitas, utilitas, venustas* (durability, utility, elegance) — translate cleanly to the review criteria every module here is held to.
 
+New here? **[The Vitruvius Handbook](./HANDBOOK.md)** is the plain-language user's manual and manifesto — what this platform believes, what's in the box, and how to adopt it. (A print-ready [HTML version](./HANDBOOK.html) ships alongside it.)
+
 ## What this is
 
 A composable library of Terraform modules, examples, and policy-as-code that:
