@@ -5,6 +5,7 @@ Reference compositions — foundation and workload-pattern modules wired togethe
 ## Shipping
 
 - [`reference-landingzone/`](./reference-landingzone/) — a platform landing zone composed from the foundation and platform-services modules. The worked demonstration of composition by output data ([ADR 0004](../docs/decisions/0004-composition-by-output-data.md)).
+- [`workload-onboarding/`](./workload-onboarding/) — the app team's side of the golden path: the root a workload team copies into its own repo to consume `web-api-aks`, including the module-consumption contract (pin a tag, upgrade by PR).
 
 ## Planned
 
