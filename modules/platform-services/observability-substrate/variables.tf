@@ -100,19 +100,30 @@ variable "internet_query_enabled" {
   description = "Whether the workspace and App Insights component answer queries (portal, API) over the public internet. False by default (private-by-default, ADR 0018) — operators need AMPLS-connected network access to query; see the README. Set true only for evaluation environments without private networking."
 }
 
+variable "name_prefix" {
+  type        = string
+  default     = "platform"
+  description = "Prefix for the Azure resource names this module creates (the substrate-deletion alert and the action-group defaults). Identifies platform-library artifacts in the estate; set it to your org short-code if you prefer."
+
+  validation {
+    condition     = can(regex("^[a-z0-9](-?[a-z0-9])*$", var.name_prefix)) && length(var.name_prefix) >= 2 && length(var.name_prefix) <= 9
+    error_message = "name_prefix must be 2-9 chars: lowercase alphanumeric with single interior hyphens."
+  }
+}
+
 variable "action_group_name" {
   type        = string
-  default     = "vitruvius-platform"
-  description = "Name of the platform action group that alerts route to. Only created when alert_email_receivers is non-empty."
+  default     = null
+  description = "Name of the platform action group that alerts route to. Only created when alert_email_receivers is non-empty. Defaults to '<name_prefix>-alerts'."
 }
 
 variable "action_group_short_name" {
   type        = string
-  default     = "vitruvius"
-  description = "Short name for the action group (shown in SMS/email). Azure limits this to 12 characters."
+  default     = null
+  description = "Short name for the action group (shown in SMS/email). Azure limits this to 12 characters. Defaults to name_prefix truncated to 12."
 
   validation {
-    condition     = length(var.action_group_short_name) > 0 && length(var.action_group_short_name) <= 12
+    condition     = var.action_group_short_name == null ? true : (length(var.action_group_short_name) > 0 && length(var.action_group_short_name) <= 12)
     error_message = "action_group_short_name must be 1–12 characters (Azure limit)."
   }
 }

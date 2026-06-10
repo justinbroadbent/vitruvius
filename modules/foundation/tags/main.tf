@@ -113,7 +113,7 @@ resource "terraform_data" "vocabulary_invariants" {
 resource "azurerm_policy_definition" "this" {
   for_each = { for k, v in local.policy_definitions : k => v if local.deploy_policy }
 
-  name                = "vitruvius-tags-${each.key}"
+  name                = "${var.name_prefix}-tags-${each.key}"
   policy_type         = "Custom"
   mode                = each.value.mode
   display_name        = each.value.displayName
@@ -126,9 +126,9 @@ resource "azurerm_policy_definition" "this" {
 resource "azurerm_management_group_policy_set_definition" "this" {
   count = local.deploy_policy ? 1 : 0
 
-  name                = "vitruvius-tag-taxonomy"
+  name                = "${var.name_prefix}-tag-taxonomy"
   policy_type         = "Custom"
-  display_name        = "Vitruvius — Tag Taxonomy (ADR 0010)"
+  display_name        = "${title(var.name_prefix)} — Tag Taxonomy (ADR 0010)"
   description         = "Bundles the required-tag, allowed-values, and inherit-from-resource-group policies that enforce the tag taxonomy in ADR 0010. Audit-before-Deny lifecycle per ADR 0008."
   management_group_id = var.policy_management_group_id
 
@@ -157,10 +157,10 @@ resource "azurerm_management_group_policy_set_definition" "this" {
 resource "azurerm_management_group_policy_assignment" "this" {
   count = local.deploy_policy ? 1 : 0
 
-  name                 = "vitruvius-tag-taxonomy"
+  name                 = "${var.name_prefix}-tag-taxonomy"
   management_group_id  = var.policy_management_group_id
   policy_definition_id = azurerm_management_group_policy_set_definition.this[0].id
-  display_name         = "Vitruvius — Tag Taxonomy"
+  display_name         = "${title(var.name_prefix)} — Tag Taxonomy"
   description          = "Assigns the tag taxonomy initiative. Defaults to DoNotEnforce for the Audit period (ADR 0008); promote via policy_enforcement_mode once telemetry supports it."
   enforce              = var.policy_enforcement_mode == "Default"
   location             = var.policy_assignment_location

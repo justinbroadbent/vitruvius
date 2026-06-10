@@ -145,13 +145,16 @@ def validate_module(module_dir: Path, schema: dict) -> None:
         elif not re.search(rf'version\s*=\s*"{re.escape(dep["version"])}"', main_tf):
             err(manifest_path, f"dependencies.avm '{dep['source']}' version '{dep['version']}' does not match main.tf")
 
-    # --- ships entries resolve to a file or a literal resource name ---
-    resource_names = set(re.findall(r'name\s*=\s*"([^"]+)"', main_tf))
+    # --- ships entries resolve to a file or a resource name in main.tf ---
+    # Substring match, not equality: resource names are commonly templated
+    # ("${var.name_prefix}-tag-taxonomy"), so the manifest declares the stable
+    # logical part of the name.
+    resource_names = re.findall(r'name\s*=\s*"([^"]+)"', main_tf)
     for kind in ("policy", "monitoring"):
         for entry in spec["ships"][kind]:
             artifact = module_dir / kind / f"{entry}.json"
-            if not artifact.exists() and entry not in resource_names:
-                err(manifest_path, f"ships.{kind} '{entry}': no {kind}/{entry}.json and no resource named '{entry}' in main.tf")
+            if not artifact.exists() and not any(entry in name for name in resource_names):
+                err(manifest_path, f"ships.{kind} '{entry}': no {kind}/{entry}.json and no resource name containing '{entry}' in main.tf")
 
     # --- declared examples and tests exist; no undeclared ones ---
     declared_examples = {e["name"] for e in spec["examples"]}

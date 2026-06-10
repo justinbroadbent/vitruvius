@@ -30,8 +30,9 @@ Anchored on AVM per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-a
 | `log_analytics_daily_quota_gb` | number | no | Daily ingestion cap (cost guardrail, AP-002). Null = no cap. |
 | `log_analytics_sku` | string | no | Pricing SKU. Default `PerGB2018`. |
 | `application_insights_retention_in_days` | number | no | App Insights retention. Default 90. |
-| `action_group_name` | string | no | Action group name. Created only with receivers. |
-| `action_group_short_name` | string | no | Action group short name (≤12 chars). Default `vitruvius`. |
+| `name_prefix` | string | no | Prefix for the alert and action-group names. Default `platform`. |
+| `action_group_name` | string | no | Action group name. Created only with receivers. Default `<name_prefix>-alerts`. |
+| `action_group_short_name` | string | no | Action group short name (≤12 chars). Default: `name_prefix` truncated to 12. |
 | `alert_email_receivers` | list(object) | no | `{name, email_address}` list. Empty (default) → no action group. |
 
 ## Outputs

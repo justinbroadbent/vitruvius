@@ -104,7 +104,7 @@ If the app team gets any of those wrong, federation fails closed — the pod can
 
 ## What ships in `policy/`
 
-Three policies, bundled into a per-workload `vitruvius-kv-hardening-<key-vault-name>` initiative. Names derive from the (globally unique) Key Vault name so two workloads in the same subscription cannot collide:
+Three policies, bundled into a per-workload `<name_prefix>-kv-hardening-<key-vault-name>` initiative (default prefix `platform`). Names derive from the (globally unique) Key Vault name so two workloads in the same subscription cannot collide:
 
 | File | Effect | Purpose |
 |---|---|---|

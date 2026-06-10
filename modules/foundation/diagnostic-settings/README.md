@@ -34,6 +34,7 @@ Notably **deferred** to v0.2 because of nested-resource complexity:
 
 | Name | Type | Required | Description |
 |---|---|---|---|
+| `name_prefix` | string | no | Prefix for the policy resource names. Default `platform`. |
 | `policy_management_group_id` | string | no | When supplied, definitions + initiative are created at this MG. When null, the module is a no-op. |
 | `log_analytics_workspace_id` | string | conditional | Required when `policy_management_group_id` is supplied. Resource ID of the substrate LAW. |
 | `policy_assignment_scope` | string | no | MG ID where the initiative is assigned. When null, the initiative is created but not assigned. |

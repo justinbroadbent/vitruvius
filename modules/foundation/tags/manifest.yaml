@@ -50,6 +50,10 @@ spec:
       required: false
       description: Optional lifecycle stage. Emitted as the 'lifecycle' tag key.
       vocabulary: [stable, experimental, deprecated]
+    - name: name_prefix
+      type: string
+      required: false
+      description: Prefix for the Azure resource names this module creates. Default 'platform'; set to your org short-code if preferred.
     - name: policy_management_group_id
       type: string
       required: false
@@ -113,7 +117,7 @@ spec:
       - allowed-values-business-criticality
       - inherit-tag-from-resource-group
       - require-tag-on-resource-group
-      - vitruvius-tag-taxonomy
+      - tag-taxonomy
     monitoring: []
     runbooks: []
 
