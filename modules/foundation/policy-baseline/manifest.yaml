@@ -1,0 +1,100 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: policy-baseline
+  area: foundation
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Estate guardrail initiative — the Deny/Audit policies every subscription inherits at a management group. Covers App Service (public access, HTTPS), Storage public-blob, and approved regions.
+
+spec:
+  inputs:
+    - name: name_prefix
+      type: string
+      required: false
+      description: Prefix for the Azure resource names this module creates. Default 'platform'; set to your org short-code if preferred.
+    - name: policy_management_group_id
+      type: string
+      required: false
+      description: Management group ID where the guardrail definitions and initiative are created. When null, the module is a no-op.
+    - name: policy_assignment_scope
+      type: string
+      required: false
+      description: MG ID where the initiative is assigned. When null, the initiative is created but not assigned.
+    - name: policy_enforcement_mode
+      type: string
+      required: false
+      description: "'DoNotEnforce' (default; Audit-before-Deny per ADR 0008) or 'Default'."
+      vocabulary: [DoNotEnforce, Default]
+    - name: policy_effect
+      type: string
+      required: false
+      description: Initiative-wide effect. Defaults to Audit per ADR 0008. Promote to Deny once Audit-mode evidence supports it.
+      vocabulary: [Audit, Deny, Disabled]
+    - name: allowed_locations
+      type: list(string)
+      required: false
+      description: Approved Azure regions for the allowed-locations guardrail. Must be non-empty when the module deploys.
+
+  outputs:
+    - name: guardrail_policies
+      type: list(string)
+      description: Sorted list of guardrail policy keys bundled in the initiative.
+    - name: initiative_id
+      type: string
+      description: Initiative resource ID; null when policy is not deployed.
+    - name: policy_definition_ids
+      type: map(string)
+      description: Map of guardrail key to definition ID; empty when policy is not deployed.
+    - name: assignment_id
+      type: string
+      description: Assignment ID; null when policy_assignment_scope is not supplied.
+
+  dependencies:
+    avm: []
+    repo: []
+
+  cross_cutting:
+    identity: false
+    observability: false
+    secrets: false
+    networking: false
+    naming: false
+    tagging: false
+
+  ships:
+    policy:
+      - app-service-no-public-access
+      - app-service-https-only
+      - storage-no-public-blob
+      - allowed-locations
+      - policy-baseline
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0003
+      - ADR-0008
+      - ADR-0025
+    anti_patterns:
+      - AP-004
+      - AP-005
+
+  examples:
+    - name: minimal
+      description: Definitions and initiative created at a management group; no assignment (handled at a higher scope or in a separate rollout PR).
+    - name: full
+      description: Full deployment — definitions, initiative, and assignment, in Audit effect and DoNotEnforce mode for the Audit period.
+
+  tests:
+    - name: policy_compliance
+      type: terraform_test
+      description: Confirms the initiative bundles all four guardrails, guardrail_policies enumerates them, the assignment respects the no-op / no-assignment / assigned modes, the default assignment is non-enforcing (Audit-before-Deny), and an empty allowed_locations is rejected when deploying.
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (off-vocabulary effect, off-vocabulary enforcement mode, bare MG name, invalid name_prefix, uppercase region) are rejected.

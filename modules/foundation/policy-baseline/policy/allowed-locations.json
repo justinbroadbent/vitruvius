@@ -1,0 +1,33 @@
+{
+  "displayName": "Resources must be deployed only in approved regions",
+  "description": "Audits or denies resources created outside the approved region list. Supports data-residency control for a regulated estate. Ships Audit-first per ADR 0008; promote to Deny once Audit-mode evidence supports it. Excludes 'global' resources, which have no meaningful region.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "location", "notIn": "[parameters('listOfAllowedLocations')]" },
+        { "field": "location", "notEquals": "global" },
+        { "field": "type", "notEquals": "Microsoft.AzureActiveDirectory/b2cDirectories" }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "listOfAllowedLocations": {
+      "type": "Array",
+      "metadata": {
+        "displayName": "Allowed locations",
+        "description": "The list of approved Azure regions.",
+        "strongType": "location"
+      }
+    },
+    "effect": {
+      "type": "String",
+      "metadata": { "displayName": "Effect", "description": "Audit, Deny, or Disabled." },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

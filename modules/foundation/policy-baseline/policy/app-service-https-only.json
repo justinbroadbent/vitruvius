@@ -1,0 +1,24 @@
+{
+  "displayName": "App Service apps must be accessible over HTTPS only",
+  "description": "Audits or denies any App Service that does not redirect all HTTP traffic to HTTPS (httpsOnly). Protects data in transit. Ships Audit-first per ADR 0008; promote to Deny once Audit-mode evidence supports it. Supports GLBA Safeguards transmission security.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "type", "equals": "Microsoft.Web/sites" },
+        { "field": "Microsoft.Web/sites/httpsOnly", "notEquals": "true" }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": { "displayName": "Effect", "description": "Audit, Deny, or Disabled." },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}
