@@ -11,7 +11,7 @@ cites_adrs: [] # e.g. [ADR-0007]
 ---
 
 <!--
-Template for a Vitruvius ADR. Copy this file to `NNNN-kebab-title.md`, assign the
+Template for a platform ADR. Copy this file to `NNNN-kebab-title.md`, assign the
 next sequential ID, and fill every section. Keep the frontmatter block first (the
 index generator requires `---` on line 1). Drafts open as PRs with the
 `kind:rfc-adr` label (ADR 0012). The two sections marked REQUIRED below are
@@ -37,7 +37,7 @@ decisions.
 
 The specifics this ADR deliberately leaves open, **named explicitly** — concrete
 values, topology, vendor choices, or downstream decisions that depend on
-information not yet available (often the adopter's real infrastructure). Vitruvius
+information not yet available (often the adopter's real infrastructure). The platform
 is a reference foundation adopted in whole or in part: decide the *contract and
 shape* here; defer the *specifics* to the adopter or a follow-up. Optionally add a
 short note on how each deferred item eventually gets decided (see ADR 0015 for the

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://vitruvius.io/schemas/module-manifest/v1.json",
-  "title": "Vitruvius Module Manifest",
-  "description": "Structured contract for a Vitruvius module. See ADR 0011.",
+  "title": "Module Manifest",
+  "description": "Structured contract for a platform module. See ADR 0011.",
   "type": "object",
   "required": ["apiVersion", "kind", "metadata", "spec"],
   "additionalProperties": false,

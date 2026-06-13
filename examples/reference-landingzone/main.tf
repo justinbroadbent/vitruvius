@@ -79,7 +79,7 @@ module "observability_substrate" {
 }
 
 # Substrate-routing policy. diagnostic-settings consumes the substrate's
-# workspace ID — the end-to-end seam this root exists to demonstrate.
+# workspace ID — the end-to-end seam this root wires together.
 # Audit-before-Deny defaults (ADR 0008).
 
 module "diagnostic_settings" {
@@ -90,6 +90,20 @@ module "diagnostic_settings" {
   policy_assignment_scope    = var.platform_management_group_id
   log_analytics_workspace_id = module.observability_substrate.log_analytics_workspace_id
   policy_assignment_location = var.location
+}
+
+# The estate guardrail baseline (ADR 0025 §1). Mandatory Deny/Audit policies —
+# no public App Services, HTTPS-only, no public blobs, approved regions —
+# assigned at the platform MG so every subscription beneath it inherits them,
+# golden path or not. Ships Audit-first (ADR 0008); a later PR promotes to Deny.
+
+module "policy_baseline" {
+  source = "../../modules/foundation/policy-baseline"
+
+  name_prefix                = var.org
+  policy_management_group_id = var.platform_management_group_id
+  policy_assignment_scope    = var.platform_management_group_id
+  allowed_locations          = [var.location]
 }
 
 # The hub network's decided core (ADR 0018): hub VNet, centralized private

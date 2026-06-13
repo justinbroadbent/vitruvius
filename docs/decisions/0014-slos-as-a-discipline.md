@@ -7,7 +7,7 @@ categories: [observability, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-002]
-cites_adrs: [ADR-0005, ADR-0011, ADR-0013]
+cites_adrs: [ADR-0005, ADR-0011, ADR-0013, ADR-0016, ADR-0025]
 ---
 
 # ADR 0014 — SLOs are a per-workload discipline; the platform provides the framework, not the targets
@@ -22,9 +22,9 @@ This ADR captures the **discipline** — that workloads have SLOs, and how the p
 
 ## Decision
 
-### 1. Every production workload declares SLOs
+### 1. Every production workload declares SLOs — on the deployment, not the module
 
-Workload-pattern modules (e.g., `web-api-aks`) will eventually expose an `slo` declaration in their manifest. v0.1.0 manifests do not yet require this — the schema field is deferred until the per-workload structure is decided (see §"Decisions deferred"). When the field arrives, every production-tier workload is expected to populate it; lower tiers are encouraged but not required.
+An SLO target is a promise the *deployed workload* makes, so it lives in that deployment's descriptor ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)), alongside its criticality and data classification. It does **not** live in a workload-pattern module's manifest: a reusable module is the cookbook, and two services built from the same pattern can carry very different SLOs ([ADR 0016](./0016-software-catalog-and-backstage-contract.md)). A module's manifest declares only the *reliability envelope it can support* (multi-zone, cross-region); the deployment declares the number it commits to. Every production-tier workload populates its SLO commitment; lower tiers are encouraged but not required.
 
 Suggested initial dimensions (workload teams choose what applies):
 
@@ -70,7 +70,7 @@ This is the symmetric case: anyone who runs a service declares SLOs for it. The 
 
 ## What this does not decide
 
-- **Manifest-schema shape.** What `slo:` looks like inside `manifest.yaml`. The structure has to support multiple SLI dimensions, target values, measurement windows, and possibly burn-rate alerting thresholds. Deferred until at least one workload team has a real SLO to declare; the schema follows reality, not the other way around.
+- **Descriptor field shape.** What the SLO commitment looks like inside the deployment descriptor ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)) — and the matching *supported-envelope* field on the module manifest. The structure has to support multiple SLI dimensions, target values, measurement windows, and possibly burn-rate alerting thresholds. Deferred until at least one workload team has a real SLO to declare; the shape follows reality, not the other way around.
 - **Default target percentiles per business-criticality tier.** Tier-0 should clearly carry stricter SLOs than tier-3, but the specific numbers (99.95% vs 99.9% vs 99.5%) are workload-team decisions made in collaboration with stakeholders.
 - **Error-budget policy templates.** Whether the platform team provides 2–3 named templates (e.g., "feature-freeze on budget exhaustion," "escalation-only on budget exhaustion") that workloads can adopt, or whether each workload writes its own. The trade-off is conformity vs autonomy.
 - **Alerting strategy.** Multi-window, multi-burn-rate alerting (Google SRE workbook, chapter 5) is the established best practice, but the specific window/burn-rate matrix is per-workload.
@@ -80,7 +80,7 @@ This is the symmetric case: anyone who runs a service declares SLOs for it. The 
 
 ## How deferred decisions get made
 
-- Manifest-schema additions ship in a follow-up ADR amending [ADR 0011 (module manifest)](./0011-module-manifest.md), once at least one workload's SLO declaration is real.
+- The descriptor field for the SLO commitment ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)), and the supported-envelope field on the module manifest, are added once at least one workload's SLO declaration is real.
 - The tooling decision is its own ADR with a procurement / build-vs-buy comparison.
 - Per-workload targets and policies are documented in each workload's onboarding RFC, not in platform ADRs.
 - Default templates (if any) ship as a docs PR (`docs/slo-templates.md`) once a few real workloads have shaken out the patterns.
@@ -109,5 +109,7 @@ This is the symmetric case: anyone who runs a service declares SLOs for it. The 
 - [AP-002](../anti-patterns.md#ap-002--telemetry-dumping-ground) — what this ADR partially prevents (the substrate as a dumping ground).
 - [ADR 0005](./0005-observability-substrate-and-signal-parity.md) — the substrate provides the data SLOs measure against.
 - [ADR 0013](./0013-platform-metrics-and-dora.md) — DORA metrics measure the *platform's* delivery; SLOs measure individual *workloads'* service quality.
+- [ADR 0016](./0016-software-catalog-and-backstage-contract.md) — the module manifest is the cookbook; a deployed workload's SLO is a property of the meal, not the recipe.
+- [ADR 0025](./0025-deployment-conformance-and-platform-baseline.md) — the SLO commitment lives in the deployment descriptor; the module declares only the envelope it supports.
 - *Site Reliability Engineering* (the Google SRE Book), particularly chapters 4–6 on SLOs and error budgets.
 - *The Site Reliability Workbook*, chapter 5, on multi-window multi-burn-rate alerting.

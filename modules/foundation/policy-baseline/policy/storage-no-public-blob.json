@@ -1,0 +1,24 @@
+{
+  "displayName": "Storage accounts must disable public blob access",
+  "description": "Audits or denies any storage account that allows anonymous public blob access (allowBlobPublicAccess). Prevents accidental public exposure of member data in a data lake or file storage. Ships Audit-first per ADR 0008; promote to Deny once Audit-mode evidence supports it. Supports GLBA Safeguards access control.",
+  "mode": "Indexed",
+  "policyRule": {
+    "if": {
+      "allOf": [
+        { "field": "type", "equals": "Microsoft.Storage/storageAccounts" },
+        { "field": "Microsoft.Storage/storageAccounts/allowBlobPublicAccess", "notEquals": "false" }
+      ]
+    },
+    "then": {
+      "effect": "[parameters('effect')]"
+    }
+  },
+  "parameters": {
+    "effect": {
+      "type": "String",
+      "metadata": { "displayName": "Effect", "description": "Audit, Deny, or Disabled." },
+      "allowedValues": ["Audit", "Deny", "Disabled"],
+      "defaultValue": "Audit"
+    }
+  }
+}

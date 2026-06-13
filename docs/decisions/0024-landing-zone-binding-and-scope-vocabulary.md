@@ -1,6 +1,6 @@
 ---
 id: 24
-title: Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+title: The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
 status: accepted
 date: 2026-06-08
 categories: [foundation, architecture, governance]
@@ -10,13 +10,13 @@ cites_anti_patterns: [AP-004, AP-005]
 cites_adrs: [ADR-0001, ADR-0003, ADR-0004, ADR-0005, ADR-0008, ADR-0010]
 ---
 
-# ADR 0024 — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+# ADR 0024 — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
 
 ## Context
 
-Vitruvius sits on top of **Azure Landing Zones (ALZ)** — Microsoft's reference layout for organizing an Azure estate into a tree of **management groups** (folders that group subscriptions so rules can apply to all of them at once), **subscriptions** (the billing and isolation unit beneath them), and **resource groups** (folders for resources inside a subscription). Modules and policy initiatives have to land somewhere in that tree, and they have to refer to **scopes** — places in the tree — that they do not own. The forces:
+The platform sits on top of **Azure Landing Zones (ALZ)** — Microsoft's reference layout for organizing an Azure estate into a tree of **management groups** (folders that group subscriptions so rules can apply to all of them at once), **subscriptions** (the billing and isolation unit beneath them), and **resource groups** (folders for resources inside a subscription). Modules and policy initiatives have to land somewhere in that tree, and they have to refer to **scopes** — places in the tree — that they do not own. The forces:
 
-- An adopter already has a tenant, very likely an existing ALZ deployment, and a management-group hierarchy shaped by their own org. Vitruvius must not invent a competing hierarchy or a `landing-zone` orchestrator module ([ADR 0004](./0004-composition-by-output-data.md)).
+- An adopter already has a tenant, very likely an existing ALZ deployment, and a management-group hierarchy shaped by their own org. The platform must not invent a competing hierarchy or a `landing-zone` orchestrator module ([ADR 0004](./0004-composition-by-output-data.md)).
 - "dev / staging / prod" appears throughout the repo ([ADR 0005](./0005-observability-substrate-and-signal-parity.md) signal parity, [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) tiered enforcement) with no decision yet on what an environment *is*.
 - Policy-assignment scope is a per-module input today, and a module that parses a scope string to guess whether it points at a subscription or a resource group is brittle. [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) §5 leaves "where an initiative is assigned" to the landing-zone decision.
 
@@ -24,11 +24,11 @@ This ADR fixes the **binding contract** — the vocabulary by which modules atta
 
 ## Decision
 
-### 1. Vitruvius binds to ALZ; it does not own the hierarchy
+### 1. The platform binds to ALZ; it does not own the hierarchy
 
-The management-group hierarchy — its depth, its names, and the placement of the Platform and Landing Zone management groups — belongs to ALZ and the adopter. Vitruvius defines how its modules attach to that tree, not the tree itself. There is no `landing-zone` module ([ADR 0004](./0004-composition-by-output-data.md)): the binding is data passed in at the environment-root boundary, not an orchestrator that calls sibling modules.
+The management-group hierarchy — its depth, its names, and the placement of the Platform and Landing Zone management groups — belongs to ALZ and the adopter. The platform defines how its modules attach to that tree, not the tree itself. There is no `landing-zone` module ([ADR 0004](./0004-composition-by-output-data.md)): the binding is data passed in at the environment-root boundary, not an orchestrator that calls sibling modules.
 
-> **In plain terms:** Vitruvius is furniture, not the house. The adopter owns the floor plan (the ALZ tree); each module just says what kind of room it needs, and the adopter's environment root supplies the actual address.
+> **In plain terms:** The platform is furniture, not the house. The adopter owns the floor plan (the ALZ tree); each module just says what kind of room it needs, and the adopter's environment root supplies the actual address.
 
 ### 2. Scopes are referenced by role, as a small named vocabulary
 
@@ -53,7 +53,7 @@ Modules ship initiatives but do not decide where they are assigned ([ADR 0003](.
 
 ### 5. Subscription vending is assumed, not built
 
-**Subscription vending** is the automated creation and placement of new subscriptions. Vitruvius assumes the adopter's ALZ provides it, and consumes its output — a subscription ID and the MG it is placed under — as environment-root input. No Vitruvius module provisions subscriptions.
+**Subscription vending** is the automated creation and placement of new subscriptions. The platform assumes the adopter's ALZ provides it, and consumes its output — a subscription ID and the MG it is placed under — as environment-root input. No platform module provisions subscriptions.
 
 ### 6. The binding lives in the environment root, as code
 
@@ -78,7 +78,7 @@ The scope vocabulary (§2) is the load-bearing part, and parameterization keeps 
 **Positive.**
 
 - Modules receive scopes by role, so they stop parsing scope strings to guess subscription-vs-resource-group (§2, §4).
-- The same Vitruvius modules drop onto any conformant ALZ tree, because they bind by role rather than to a shipped hierarchy.
+- The same platform modules drop onto any conformant ALZ tree, because they bind by role rather than to a shipped hierarchy.
 - Assignment scope has a defined home (§4, §6), and the pilot-on-a-resource-group-then-promote path is first-class.
 - No orchestrator module: the binding is legible data in the environment root (ADR 0004), and it is code, not portal clicks (AP-004).
 - Networking, identity, CI/CD, and the reference root all have a defined notion of where to bind.

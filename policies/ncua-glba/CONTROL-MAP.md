@@ -32,11 +32,20 @@ Aggregation initiative (planned, issue #13): `platform-csf-pr-pt`
 |---|---|---|---|---|
 | `csf:PR.PT-1`<br>`ncua:748-app-a.III.C` | Audit/log records are determined, documented, implemented, and reviewed in accordance with policy | ✅ implemented | [`keyvault-route-to-substrate`](../../modules/foundation/diagnostic-settings/policy/keyvault-route-to-substrate.json)<br>[`aks-route-to-substrate`](../../modules/foundation/diagnostic-settings/policy/aks-route-to-substrate.json)<br>[`service-bus-route-to-substrate`](../../modules/foundation/diagnostic-settings/policy/service-bus-route-to-substrate.json)<br>[`app-service-route-to-substrate`](../../modules/foundation/diagnostic-settings/policy/app-service-route-to-substrate.json)<br>[`apim-route-to-substrate`](../../modules/foundation/diagnostic-settings/policy/apim-route-to-substrate.json)<br>[`keyvault-diagnostic-settings-required`](../../modules/workload-patterns/web-api-aks/policy/keyvault-diagnostic-settings-required.json)<br>[`platform-services/observability-substrate`](../../modules/platform-services/observability-substrate/) | Azure Policy compliance state for the substrate-routing initiative; Log Analytics ingestion by resource type; the substrate-deletion activity-log alert. |
 
+## Data Security (`pr-ds`)
+
+Aggregation initiative (planned, issue #13): `platform-csf-pr-ds`
+
+| Control | Title | Status | Implemented by | Evidence |
+|---|---|---|---|---|
+| `csf:PR.DS-2`<br>`ncua:748-app-a.III.C` | Data-in-transit is protected | ✅ implemented | [`app-service-https-only`](../../modules/foundation/policy-baseline/policy/app-service-https-only.json) | Azure Policy compliance state for the estate policy-baseline initiative, surfaced through the observability substrate (ADR 0005). |
+| `csf:PR.DS-5`<br>`ncua:748-app-a.III.C` | Protections against data leaks are implemented | ✅ implemented | [`app-service-no-public-access`](../../modules/foundation/policy-baseline/policy/app-service-no-public-access.json)<br>[`storage-no-public-blob`](../../modules/foundation/policy-baseline/policy/storage-no-public-blob.json) | Azure Policy compliance state for the estate policy-baseline initiative; resource-configuration compliance by resource type, surfaced through the observability substrate (ADR 0005). |
+
 ## Coverage summary
 
 | Status | Count |
 |---|---|
-| ✅ implemented | 2 |
+| ✅ implemented | 4 |
 | 📋 manual | 1 |
 | ⛔ unimplemented (declared gap) | 1 |
 
@@ -50,6 +59,9 @@ Aggregation initiative (planned, issue #13): `platform-csf-pr-pt`
 | `modules/foundation/diagnostic-settings → keyvault-route-to-substrate` | `csf:PR.PT-1` |
 | `modules/foundation/diagnostic-settings → service-bus-route-to-substrate` | `csf:PR.PT-1` |
 | `modules/foundation/identity (module)` | `csf:PR.AC-1` |
+| `modules/foundation/policy-baseline → app-service-https-only` | `csf:PR.DS-2` |
+| `modules/foundation/policy-baseline → app-service-no-public-access` | `csf:PR.DS-5` |
+| `modules/foundation/policy-baseline → storage-no-public-blob` | `csf:PR.DS-5` |
 | `modules/platform-services/observability-substrate (module)` | `csf:PR.PT-1` |
 | `modules/workload-patterns/web-api-aks → keyvault-diagnostic-settings-required` | `csf:PR.PT-1` |
 | `modules/workload-patterns/web-api-aks → keyvault-rbac-authorization-required` | `csf:PR.AC-1` |

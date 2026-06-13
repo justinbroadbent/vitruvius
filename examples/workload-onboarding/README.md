@@ -2,7 +2,7 @@
 
 The **app team's side** of the golden path. `examples/reference-landingzone` shows what the *platform team* deploys; this example shows what a *workload team* copies into its own repository to onboard a web API onto the [`web-api-aks`](../../modules/workload-patterns/web-api-aks/) pattern.
 
-The fictional team here is `payments-team`, onboarding a workload called `paylink`.
+The example team here is `payments-team`, onboarding a workload called `paylink`.
 
 ## What you get vs. what you own
 

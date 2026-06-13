@@ -43,3 +43,8 @@ output "ampls_id" {
   value       = module.hub.ampls_id
   description = "The AMPLS the substrate's resources are scoped into."
 }
+
+output "policy_baseline_initiative_id" {
+  value       = module.policy_baseline.initiative_id
+  description = "The estate policy-baseline initiative, created and assigned at the platform management group (ADR 0025 §1)."
+}

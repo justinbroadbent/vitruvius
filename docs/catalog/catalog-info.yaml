@@ -5,7 +5,7 @@ apiVersion: backstage.io/v1alpha1
 kind: Domain
 metadata:
   name: vitruvius
-  description: The Vitruvius reference platform — a library of decisions and Terraform modules for a regulated financial-services estate on Azure.
+  description: A reference platform foundation — a library of decisions and Terraform modules for a regulated financial-services estate on Azure.
 spec:
   owner: group:platform-team
 ---

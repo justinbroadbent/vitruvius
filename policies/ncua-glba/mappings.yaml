@@ -71,3 +71,30 @@ control_families:
           - module: platform-services/observability-substrate
             note: The central Log Analytics workspace the logs land in, with a deletion alert guarding the store itself (ADR 0008 §3 — preventive deny is a stated deferral).
         evidence: Azure Policy compliance state for the substrate-routing initiative; Log Analytics ingestion by resource type; the substrate-deletion activity-log alert.
+
+  - id: pr-ds
+    name: Data Security
+    initiative: platform-csf-pr-ds
+    controls:
+      - id: csf:PR.DS-2
+        title: Data-in-transit is protected
+        also: [ncua:748-app-a.III.C]
+        status: implemented
+        implemented_by:
+          - module: foundation/policy-baseline
+            policy: app-service-https-only
+            note: Estate guardrail — every App Service must redirect HTTP to HTTPS. Assigned at the management group, so it applies to every subscription beneath it whether or not the workload used a golden path (ADR 0025 §1).
+        evidence: Azure Policy compliance state for the estate policy-baseline initiative, surfaced through the observability substrate (ADR 0005).
+
+      - id: csf:PR.DS-5
+        title: Protections against data leaks are implemented
+        also: [ncua:748-app-a.III.C]
+        status: implemented
+        implemented_by:
+          - module: foundation/policy-baseline
+            policy: app-service-no-public-access
+            note: Denies App Services with public network access — internal apps stay private-endpoint-only, not reachable from the internet.
+          - module: foundation/policy-baseline
+            policy: storage-no-public-blob
+            note: Denies anonymous public blob access — member data in a lake or file store cannot be exposed by a single misconfiguration.
+        evidence: Azure Policy compliance state for the estate policy-baseline initiative; resource-configuration compliance by resource type, surfaced through the observability substrate (ADR 0005).

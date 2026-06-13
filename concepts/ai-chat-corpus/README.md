@@ -113,7 +113,7 @@ Output includes inline citations to specific files and sections. The UI renders 
 API-first design. v1 ships:
 
 - A **Go HTTP service** as the backend, exposing a JSON API for queries and Server-Sent Events for streaming responses.
-- A **Go CLI client** (`vitruvius-ask "your question"`) as the primary interface for engineers. Single binary; no Python, Node, or other toolchain required to use it.
+- A **Go CLI client** (`platform-ask "your question"`) as the primary interface for engineers. Single binary; no Python, Node, or other toolchain required to use it.
 
 Web UI and Backstage plugin are deliberately deferred.
 
@@ -195,7 +195,7 @@ Expected: structured query over frontmatter; returns a list, not prose. (This is
 | Storage | Azure AI Search lowest tier sufficient (low-tens-of-thousands of chunks). |
 | Compute | Go binary container ~30–50 MB image; ~64 MB RAM at idle in Container Apps; sub-second cold start. |
 | API cost per conversation | $0.05–$0.20 (Sonnet for routine; Opus for complex audit-grade questions). |
-| Build effort | v1 in 3–5 days for someone fluent in Go + Azure AI Search; longer if learning either. |
+| Build effort | Small: a single Go service over an Azure AI Search index; the corpus is ~500 KB of markdown. |
 
 ## Open questions (for the build conversation, not now)
 

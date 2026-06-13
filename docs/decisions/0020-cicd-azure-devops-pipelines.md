@@ -7,7 +7,7 @@ categories: [process, infrastructure, governance]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: [AP-007, AP-004, AP-006]
-cites_adrs: [ADR-0007, ADR-0009, ADR-0011, ADR-0013, ADR-0017, ADR-0018, ADR-0024]
+cites_adrs: [ADR-0007, ADR-0008, ADR-0009, ADR-0011, ADR-0013, ADR-0017, ADR-0018, ADR-0024, ADR-0025]
 ---
 
 # ADR 0020 — CI/CD architecture: OIDC-federated, plan-gated, with a generated deployment ledger
@@ -23,7 +23,8 @@ The architecture is platform-agnostic. The reference implementation is Azure Dev
 ### 1. Plan is a pull-request check; apply is gated, approved, and promoted per environment
 
 - `plan` — Terraform's dry run, which shows what would change without changing anything — runs as a PR check. No apply runs on a PR.
-- `apply` — the step that makes real changes — runs after merge, per environment, behind an approval gate. A production apply requires an approver who is not the author.
+- The plan is also the input to the **conformance check** ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)): the deployment's declared profile is evaluated against the rendered plan, and the PR cannot merge if a rule fails without a recorded exemption ([ADR 0008](./0008-audit-before-deny-policy-lifecycle.md)).
+- `apply` — the step that makes real changes — runs after merge, per environment, behind an approval gate. A production apply requires an approver who is not the author. Apply consumes the exact plan that was reviewed and conformance-checked — bound by the plan hash recorded in the ledger (§3), never a silent re-plan — so what ships is what was proven.
 - Promotion is dev → staging → prod, each its own environment-subscription ([ADR 0024](./0024-landing-zone-binding-and-scope-vocabulary.md)). The same built artifact promotes through every environment; environments differ by input, not by rebuild.
 - Standard / normal / emergency changes ([ADR 0007](./0007-change-as-code.md) §4) map to conditional stages and PR tags.
 
@@ -47,7 +48,7 @@ State and many other resources are network-private ([ADR 0017](./0017-terraform-
 
 PR validation runs `fmt` / `validate` / `terraform test`, plus manifest validation: each `manifest.yaml` is validated against `schemas/module-manifest.schema.json` and checked for parity with the module's `variables.tf` / `outputs.tf` ([ADR 0011](./0011-module-manifest.md)).
 
-> **In plain terms:** the pipeline never holds a password, it shows its work on every proposed change (the plan), it needs a second person's sign-off to touch production, and it writes its own tamper-evident receipt for every deployment.
+> **In plain terms:** the pipeline never holds a password, it shows its work on every proposed change (the plan) and checks that plan is compliant before it can merge, it needs a second person's sign-off to touch production, and it writes its own tamper-evident receipt for every deployment.
 
 ## What this does not decide
 
@@ -82,6 +83,8 @@ The controls are load-bearing; the platform under them is not. Porting to anothe
 - [AP-004](../anti-patterns.md#ap-004--configuration-drift) — the scheduled drift pipeline.
 - [AP-006](../anti-patterns.md#ap-006--secret-rotation-toil) — OIDC federation, no static secrets in the deploy identity.
 - [ADR 0007](./0007-change-as-code.md) — the change-as-code controls this architecture carries.
+- [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) — a failed conformance rule blocks the merge unless a recorded exemption covers it.
+- [ADR 0025](./0025-deployment-conformance-and-platform-baseline.md) — the PR plan is the conformance-evaluation input; apply consumes that exact, proven plan.
 - [ADR 0009](./0009-secrets-ephemeral-by-default.md) — OIDC federation, no static secrets.
 - [ADR 0013](./0013-platform-metrics-and-dora.md) — the deployment ledger is the DORA signal source.
 - [ADR 0017](./0017-terraform-state-and-backend.md) — the pipeline identity accesses state and runs the drift job.
