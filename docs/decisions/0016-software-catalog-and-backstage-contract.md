@@ -36,7 +36,7 @@ Standing up Backstage — a Node service, a database, auth, plugins, a TechDocs 
 
 Backstage describes everything in its catalog as entities of a few well-known **kinds**. The estate maps onto them as follows:
 
-| Vitruvius concept | Backstage kind | Notes |
+| Platform concept | Backstage kind | Notes |
 |---|---|---|
 | The reference platform as a whole | **Domain** (`vitruvius`) | One domain; the umbrella over everything. |
 | Each area (`foundation`, `networking`, `platform-services`, `workload-patterns`) | **System** | Derived from `metadata.area`. |
@@ -46,7 +46,7 @@ Backstage describes everything in its catalog as entities of a few well-known **
 | Provisioned Azure resources | **Resource** | *Deferred* — instance-level and infrastructure-dependent. |
 | People | **User** | *Deferred* — real org data, supplied by the adopter. |
 
-A Vitruvius module is modeled as the **library/pattern**, not a running instance. When an adopter actually *deploys* a workload using `web-api-aks`, that deployed instance becomes a `Component` of type `service` in **the adopter's** catalog — downstream of this repo and out of scope here. Vitruvius catalogs the library; adopters catalog their instances.
+A platform module is modeled as the **library/pattern**, not a running instance. When an adopter actually *deploys* a workload using `web-api-aks`, that deployed instance becomes a `Component` of type `service` in **the adopter's** catalog — downstream of this repo and out of scope here. The platform catalogs the library; adopters catalog their instances.
 
 > **In plain terms:** this repo catalogs the cookbook, not the meals. Each adopter catalogs what they actually cooked.
 

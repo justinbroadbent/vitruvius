@@ -87,6 +87,23 @@ Directories with stub READMEs (`policies/ncua-glba`'s full catalog, the planned 
 
 See [`AGENTS.md`](./AGENTS.md) for the conventions every new module must follow, and [`modules/foundation/README.md`](./modules/foundation/README.md) for the foundation layer's overview.
 
+## Continuous integration
+
+Every push and pull request runs [`.github/workflows/ci.yml`](./.github/workflows/ci.yml). A change merges only when every job passes.
+
+| Job | What it checks | Gate |
+|---|---|---|
+| `fmt` | `terraform fmt` — all Terraform is canonically formatted. | Blocks merge |
+| `manifest` | Each `manifest.yaml` validates against the schema and matches its module's code — inputs, outputs, shipped policy/monitoring, citations. Then regenerates `catalog-info.yaml` and `CONTROL-MAP.md` and fails if either drifted from its source. | Blocks merge |
+| `module` | Per module: `terraform validate` + `terraform test`. | Blocks merge |
+| `example` | Per example: `terraform validate` (examples are validated, not unit-tested). | Blocks merge |
+| `adr-index` | Regenerates `docs/decisions/README.md` from ADR frontmatter and fails if it drifted. | Blocks merge |
+| `all` | Passes only if every job above passed — the single status branch protection requires. | The gate |
+
+`discover` runs first to build the per-module and per-example test matrices; it is plumbing, not a check.
+
+Two patterns run throughout. **Validate** — authored files are correct and match the code. **Drift-check** — generated views (`catalog-info.yaml`, `CONTROL-MAP.md`, the ADR index) are rebuilt and must equal what's committed, so the catalog, the compliance map, and the decision index can never silently fall out of sync with the manifests, mappings, and frontmatter they derive from. The reference pipeline is Azure DevOps ([ADR 0020](./docs/decisions/0020-cicd-azure-devops-pipelines.md)); this repo's own CI is GitHub Actions.
+
 ## License
 
 Apache-2.0. See [LICENSE](./LICENSE).

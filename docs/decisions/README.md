@@ -29,7 +29,8 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 | [0018](0018-network-topology-hub-spoke.md) | Network topology is hub-spoke with default-deny egress and centralized private DNS | accepted | networking, foundation, security | 2026-06-08 |
 | [0020](0020-cicd-azure-devops-pipelines.md) | CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger | accepted | process, infrastructure, governance | 2026-06-08 |
 | [0021](0021-ncua-glba-control-mapping-contract.md) | Compliance control mapping is declared data; the control map is a derived view | accepted | security, governance, compliance | 2026-06-08 |
-| [0024](0024-landing-zone-binding-and-scope-vocabulary.md) | Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own | accepted | foundation, architecture, governance | 2026-06-08 |
+| [0024](0024-landing-zone-binding-and-scope-vocabulary.md) | The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own | accepted | foundation, architecture, governance | 2026-06-08 |
+| [0025](0025-deployment-conformance-and-platform-baseline.md) | Conformance is proven at plan time, not assembled; mandatory controls are platform-owned | accepted | foundation, architecture, governance, security | 2026-06-13 |
 
 ## By category
 
@@ -42,7 +43,8 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 
 - [0004](0004-composition-by-output-data.md) — Composition is by output data; no orchestrator modules
 - [0011](0011-module-manifest.md) — Module manifest as the structured contract for every module
-- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0025](0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned
 
 ### change-management
 
@@ -67,7 +69,8 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0016](0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view
 - [0017](0017-terraform-state-and-backend.md) — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
 - [0018](0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS
-- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0025](0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned
 
 ### governance
 
@@ -80,7 +83,8 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0015](0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives
 - [0020](0020-cicd-azure-devops-pipelines.md) — CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
-- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0025](0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned
 
 ### infrastructure
 
@@ -120,10 +124,11 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0017](0017-terraform-state-and-backend.md) — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact
 - [0018](0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
+- [0025](0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned
 
 ## By status
 
-### accepted (21)
+### accepted (22)
 
 - [0001](0001-iac-terraform-with-avm.md) — IaC is Terraform, anchored on Azure Verified Modules
 - [0002](0002-observability-otel-first.md) — Observability is OpenTelemetry-first, emission target is configuration
@@ -145,4 +150,5 @@ Index of ADRs in this repo, grouped by category. Each ADR is a single decision w
 - [0018](0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS
 - [0020](0020-cicd-azure-devops-pipelines.md) — CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger
 - [0021](0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view
-- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — Vitruvius binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0024](0024-landing-zone-binding-and-scope-vocabulary.md) — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own
+- [0025](0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned

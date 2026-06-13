@@ -66,7 +66,7 @@ If an engineer raises a concrete technical blocker against a draft pattern, ADR,
 
 Two sections are **required** in every ADR and present in [`_template.md`](_template.md):
 
-- **What this does not decide** — the specifics deliberately left open, named explicitly. Vitruvius is a reference foundation that organizations adopt in whole or in part, often before the adopter's real infrastructure is known. Decide the *contract and shape*; defer the *concrete values, topology, and vendor choices* to the adopter or to a follow-up decision.
+- **What this does not decide** — the specifics deliberately left open, named explicitly. The platform is a reference foundation that organizations adopt in whole or in part, often before the adopter's real infrastructure is known. Decide the *contract and shape*; defer the *concrete values, topology, and vendor choices* to the adopter or to a follow-up decision.
 - **Reversibility** — classify the decision as cheap-to-change (a two-way door: a config or interface change with a small blast radius) or load-bearing (a one-way door: other modules or external contracts depend on it), and state what it would cost to unwind.
 
 The point is to make every decision declare its blast radius, keep the line between reference design and real infrastructure visible to any adopter, and stop the platform from being locked into corners by decisions that only looked cheap. Both sections are additive, cost nothing, and are enforced by review, not tooling — consistent with the rest of this ADR.

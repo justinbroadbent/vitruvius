@@ -34,7 +34,7 @@
                 {
                   "type": "Microsoft.KeyVault/vaults/providers/diagnosticSettings",
                   "apiVersion": "2021-05-01-preview",
-                  "name": "[concat(parameters('resourceName'), '/Microsoft.Insights/vitruvius-substrate-routing')]",
+                  "name": "[concat(parameters('resourceName'), '/Microsoft.Insights/substrate-routing')]",
                   "properties": {
                     "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
                     "logs": [{ "categoryGroup": "allLogs", "enabled": true }],
