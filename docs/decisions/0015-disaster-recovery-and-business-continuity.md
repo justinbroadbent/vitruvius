@@ -7,7 +7,7 @@ categories: [governance, security, foundation]
 supersedes: []
 superseded_by: []
 cites_anti_patterns: []
-cites_adrs: [ADR-0007, ADR-0010, ADR-0011]
+cites_adrs: [ADR-0007, ADR-0010, ADR-0011, ADR-0016, ADR-0025]
 ---
 
 # ADR 0015 — Disaster recovery is per-workload; the platform provides the primitives
@@ -24,12 +24,12 @@ This ADR captures the **discipline** — DR is per-workload, the platform provid
 
 ## Decision
 
-### 1. Every workload pattern declares RTO and RPO targets per environment
+### 1. Every workload declares RTO and RPO targets — on the deployment, not the module
 
 - **RTO (Recovery Time Objective)** — the maximum acceptable downtime after a disaster.
 - **RPO (Recovery Point Objective)** — the maximum acceptable data loss, measured in time (e.g., "no more than 15 minutes of writes").
 
-v0.1.0 manifests do not yet require an `rto`/`rpo` field — the schema addition is deferred until the per-workload structure is decided. When the field arrives, every production-tier workload must populate it; lower tiers are encouraged to.
+The targets are a promise the *deployed workload* makes, per environment, so they live in that deployment's descriptor ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)), not in a reusable module's manifest — two services built from the same pattern can need very different recovery targets ([ADR 0016](./0016-software-catalog-and-backstage-contract.md)). A module's manifest declares only the *recovery envelope it can support* (geo-redundancy, immutable backup); the deployment declares the targets it commits to. Every production-tier workload populates them; lower tiers are encouraged to.
 
 The targets are workload-team decisions. The platform team's role is to ensure the *primitives* — geo-redundancy, backup, restore tooling — make the declared targets achievable.
 
@@ -62,7 +62,7 @@ Azure **paired regions** are pre-matched pairs of regions with specific update-r
 
 ## What this does not decide
 
-- **Manifest-schema shape.** The `rto:` and `rpo:` fields in `manifest.yaml`. Likely per-environment objects (e.g., `rto: { prod: 4h, staging: 24h, dev: best_effort }`), but the exact shape is deferred until at least one workload has a real declaration.
+- **Descriptor field shape.** The `rto:` / `rpo:` fields in the deployment descriptor ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)), and the matching supported-envelope field on the module manifest. Likely per-environment objects (e.g., `rto: { prod: 4h, staging: 24h, dev: best_effort }`), but the exact shape is deferred until at least one workload has a real declaration.
 - **Default RTO/RPO suggestions per business-criticality tier.** Reasonable starting points exist (tier-0 = minutes, tier-3 = days), but the platform team should not declare them without input from risk, the relevant business stakeholder, and the impacted workload teams. Suggested *defaults* may eventually live in `docs/dr-templates.md`; *targets* always come from the conversation with the team.
 - **Region-pair selection.** The adopter's Azure region footprint is assumed small (likely 1–2 regions). The choice of primary/DR pair is environment-specific and depends on data-residency, latency, and cost considerations not yet collected.
 - **Backup tooling.** Azure Backup vs Azure Site Recovery vs a vendor product (Veeam, Commvault) vs database-native mechanisms (SQL geo-replication, Cosmos multi-region writes, etc.). Likely a mix; the choice per primitive is a follow-up ADR.
@@ -72,7 +72,7 @@ Azure **paired regions** are pre-matched pairs of regions with specific update-r
 
 ## How deferred decisions get made
 
-- Manifest-schema additions ship in a follow-up ADR amending [ADR 0011 (module manifest)](./0011-module-manifest.md), once at least one workload's RTO/RPO declaration is real.
+- The descriptor fields for the RTO/RPO commitment ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)), and the supported-envelope field on the module manifest, are added once at least one workload's declaration is real.
 - Region-pair selection ships per environment, in that environment's root config, not in a platform ADR.
 - The backup-tooling decision is a follow-up ADR with a procurement / build-vs-buy comparison per primitive.
 - Drill cadence and BCP integration are documented in `docs/dr-runbook.md` (future) and reviewed with risk leadership at least annually.
@@ -102,5 +102,7 @@ Azure **paired regions** are pre-matched pairs of regions with specific update-r
 
 - [ADR 0007](./0007-change-as-code.md) — drill records flow through the deployment ledger.
 - [ADR 0010](./0010-tag-taxonomy.md) — the `business-criticality` tag is the suggested driver for default targets, when defaults eventually exist.
+- [ADR 0016](./0016-software-catalog-and-backstage-contract.md) — the module manifest is the cookbook; a deployed workload's RTO/RPO is a property of the meal, not the recipe.
+- [ADR 0025](./0025-deployment-conformance-and-platform-baseline.md) — RTO/RPO commitments live in the deployment descriptor; the module declares only the envelope it supports.
 - FFIEC IT Examination Handbook — Business Continuity Management — the regulatory anchor for credit unions.
 - Google SRE Book, chapter on disaster-recovery testing — the source of the "unverified backup is not a backup" framing.
