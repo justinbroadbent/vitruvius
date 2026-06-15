@@ -26,3 +26,7 @@ Thumbs.db
 # Test artifacts
 .test-data/
 *.test.json
+
+# Python bytecode
+__pycache__/
+*.pyc

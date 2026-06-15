@@ -69,7 +69,11 @@ vitruvius/
     generate-catalog-info.py         # regenerates each module's catalog-info.yaml from its manifest (drift-gated)
     generate-control-map.py          # regenerates the NCUA/GLBA control map from declared mappings (drift-gated)
     generate-implementation-status.py # regenerates IMPLEMENTATION-STATUS.md; fails if an accepted ADR lacks an entry
+    validate-vocabularies.py         # drift-checks the controlled-tag vocabulary across its representations (ADR 0010)
     evaluate-conformance.py          # the ADR 0025 plan-policy gate (self-tested against plan fixtures in CI)
+    pipeline.py                      # vendor-independent deploy control: gate/verify/receipt + exact-plan (ADR 0020)
+  pipelines/
+    azure-pipelines-deploy.yml       # reference ADR 0020 deployment pipeline (plan -> gate -> approve -> apply)
   .github/
     workflows/
       ci.yml                # fmt, validate, terraform test, manifest validation, all drift checks, conformance self-test
