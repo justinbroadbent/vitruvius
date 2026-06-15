@@ -42,7 +42,8 @@ stages:
               inlineScript: |
                 set -euo pipefail
                 cd "$(TF_ROOT)"
-                terraform init
+                test -f .terraform.lock.hcl || { echo "##vso[task.logissue type=error]no committed .terraform.lock.hcl in $(TF_ROOT)"; exit 1; }
+                terraform init -lockfile=readonly        # provider selection is pinned by the committed lockfile
                 terraform plan -out=tfplan
                 terraform show -json tfplan > tfplan.json
           - script: |
@@ -87,16 +88,21 @@ stages:
                 - bash: |
                     set +e
                     R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
+                    ACTUAL=$(git rev-parse HEAD)      # the commit actually checked out, not just the requested one
+                    if [ "$ACTUAL" != "$(Build.SourceVersion)" ]; then
+                      echo "##vso[task.logissue type=error]checked-out $ACTUAL != requested $(Build.SourceVersion)"
+                      echo "##vso[task.setvariable variable=verifyResult]failed"; exit 1
+                    fi
                     python scripts/pipeline.py verify \
                       --root "$R" --manifest "$R/plan-manifest.json" \
                       --repository "$(Build.Repository.Name)" \
-                      --commit "$(Build.SourceVersion)" \
+                      --commit "$ACTUAL" \
                       --environment "${{ parameters.environment }}" \
                       --unit "$(TF_ROOT)"
                     RC=$?
                     [ $RC -eq 0 ] && echo "##vso[task.setvariable variable=verifyResult]success" || echo "##vso[task.setvariable variable=verifyResult]failed"
                     exit $RC          # fail the job on drift; the variable is already set for the receipt
-                  displayName: Verify verdict inputs (fail closed; checks commit matches the manifest)
+                  displayName: Verify verdict inputs (fail closed; checks the actual checked-out commit and the manifest)
                 - task: AzureCLI@2
                   displayName: terraform apply tfplan (exact saved plan; lockfile readonly; no re-plan)
                   condition: succeeded()
@@ -128,9 +134,9 @@ stages:
                       --apply-result "$(applyResult)" \
                       --apply-exit-code "$(applyExitCode)" \
                       --pipeline-result "$(Agent.JobStatus)" \
-                      --applied-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                      --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
                       --out "$R/deployment-receipt.json"
-                  displayName: Deployment receipt (every terminal outcome)
+                  displayName: Deployment receipt (every handled verify/apply outcome once checkout + bundle are available)
                   condition: always()
                 - publish: $(Pipeline.Workspace)/plan-${{ parameters.environment }}/deployment-receipt.json
                   artifact: receipt-${{ parameters.environment }}

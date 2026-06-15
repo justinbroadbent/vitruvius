@@ -43,6 +43,7 @@ import hashlib
 import importlib.util
 import json
 import os
+import posixpath
 import shutil
 import sys
 import tempfile
@@ -75,6 +76,31 @@ REQUIRED_MANIFEST_FIELDS = {
     "manifest_version", "repository", "commit", "environment", "unit",
     "profile", "gated_at", "hashes", "exemptions_used",
 }
+
+
+class PipelineError(Exception):
+    pass
+
+
+def canonical_unit(raw: str) -> str:
+    """One canonical repo-relative POSIX path, confined to the repository.
+
+    Rejects absolute paths, traversal, and anything resolving outside the repo,
+    so repository + commit + canonical unit is a stable deployable-unit identity.
+    """
+    if not raw or not raw.strip():
+        raise PipelineError("deployable unit is empty")
+    p = raw.strip().replace("\\", "/")
+    if p.startswith("/") or (len(p) > 1 and p[1] == ":"):
+        raise PipelineError(f"deployable unit must be repo-relative, not absolute: {raw!r}")
+    norm = posixpath.normpath(p)
+    if norm in (".", "") or norm == ".." or norm.startswith("../") or "/../" in norm:
+        raise PipelineError(f"deployable unit escapes the repository or is ambiguous: {raw!r}")
+    resolved = (REPO / norm).resolve()
+    repo = REPO.resolve()
+    if resolved != repo and repo not in resolved.parents:
+        raise PipelineError(f"deployable unit resolves outside the repository: {raw!r}")
+    return norm
 
 
 def sha256_file(path: Path) -> str:
@@ -118,6 +144,11 @@ def used_exemptions(descriptor: dict, plan: dict, registry: dict) -> list[dict]:
 
 def cmd_gate(args) -> int:
     root = Path(args.root)
+    try:
+        unit = canonical_unit(args.unit)
+    except PipelineError as exc:
+        print(f"FAIL {exc}", file=sys.stderr)
+        return 1
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     try:
         desc = ev.validate_descriptor(root / "vitruvius.yaml", schema)
@@ -141,7 +172,7 @@ def cmd_gate(args) -> int:
         "repository": args.repository,
         "commit": args.commit,
         "environment": args.environment,
-        "unit": args.unit,
+        "unit": unit,
         "profile": profile_ref,
         "gated_at": datetime.now(timezone.utc).isoformat(),
         "hashes": artifact_hashes(root, profile_ref),
@@ -175,10 +206,35 @@ def cmd_verify(args) -> int:
     for k in sorted(REQUIRED_MANIFEST_FIELDS - set(manifest)):
         problems.append(f"manifest missing required field '{k}'")
 
+    try:
+        unit = canonical_unit(args.unit)
+    except PipelineError as exc:
+        print(f"FAIL {exc}", file=sys.stderr)
+        return 1
+
     for field, runtime in [("repository", args.repository), ("commit", args.commit),
-                           ("environment", args.environment), ("unit", args.unit)]:
+                           ("environment", args.environment), ("unit", unit)]:
         if manifest.get(field) != runtime:
             problems.append(f"{field} mismatch: manifest {manifest.get(field)!r} != runtime {runtime!r}")
+
+    # Git-anchor descriptor and profile selection: the bundle descriptor must equal
+    # the committed one at the pinned commit, and the profile we resolve comes from
+    # the committed descriptor — not solely from the unsigned manifest. Otherwise a
+    # replaced bundle could select a weaker existing profile and copy its valid
+    # git-anchored hash forward.
+    committed_profile = manifest.get("profile")
+    committed_desc = REPO / unit / "vitruvius.yaml"
+    bundle_desc = Path(args.root) / "vitruvius.yaml"
+    if not bundle_desc.exists():
+        problems.append("bundle has no vitruvius.yaml descriptor")
+    if not committed_desc.exists():
+        problems.append(f"no committed descriptor at {unit}/vitruvius.yaml")
+    else:
+        if bundle_desc.exists() and sha256_file(bundle_desc) != sha256_file(committed_desc):
+            problems.append("bundle descriptor differs from the committed descriptor at the pinned commit")
+        committed_profile = yaml.safe_load(committed_desc.read_text(encoding="utf-8"))["spec"]["profile"]
+        if manifest.get("profile") != committed_profile:
+            problems.append(f"manifest profile {manifest.get('profile')!r} != committed descriptor profile {committed_profile!r}")
 
     hashes = manifest.get("hashes", {})
     keys = set(hashes)
@@ -186,8 +242,8 @@ def cmd_verify(args) -> int:
         problems.append(f"manifest has unexpected hash keys: {sorted(keys - EXPECTED_HASH_KEYS)}")
     for k in sorted(EXPECTED_HASH_KEYS - keys):
         problems.append(f"manifest missing hash key '{k}'")
-    if keys == EXPECTED_HASH_KEYS and "profile" in manifest:
-        recomputed = artifact_hashes(args.root, manifest["profile"])
+    if keys == EXPECTED_HASH_KEYS and committed_profile:
+        recomputed = artifact_hashes(args.root, committed_profile)  # profile resolved from the committed descriptor
         for k in sorted(EXPECTED_HASH_KEYS):
             if hashes.get(k) != recomputed.get(k):
                 problems.append(f"artifact '{k}' changed since the gate")
@@ -224,6 +280,8 @@ def _failure_phase(verify_result: str, apply_attempted: bool, apply_result: str)
 def cmd_receipt(args) -> int:
     manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
     apply_attempted = args.apply_attempted == "true"
+    completed_at = args.completed_at or datetime.now(timezone.utc).isoformat()
+    apply_succeeded = apply_attempted and args.apply_result == "success"
     try:
         exit_code = int(args.apply_exit_code)
     except (TypeError, ValueError):
@@ -244,11 +302,89 @@ def cmd_receipt(args) -> int:
         "apply_exit_code": exit_code,
         "failure_phase": _failure_phase(args.verify_result, apply_attempted, args.apply_result),
         "pipeline_result": args.pipeline_result,
-        "applied_at": args.applied_at or datetime.now(timezone.utc).isoformat(),
+        "completed_at": completed_at,
+        "applied_at": completed_at if apply_succeeded else None,
     }
     Path(args.out).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     print(f"OK — receipt written (phase={receipt['failure_phase']}, verify={args.verify_result}, apply={args.apply_result}).")
     return 0
+
+
+def contract_test() -> list[str]:
+    """Static contract check on the deploy pipeline YAML — orchestration, not runtime.
+
+    The control logic is only safe if the orchestration actually wires it: the
+    deploy job must check out the repo before verifying, verify the real commit,
+    pin providers with the committed lockfile on both stages, apply the saved plan
+    without a second plan, and emit + publish a receipt for every outcome.
+    """
+    problems: list[str] = []
+    path = REPO / "pipelines" / "azure-pipelines-deploy.yml"
+    try:
+        doc = yaml.safe_load(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"deploy pipeline YAML did not parse: {exc}"]
+
+    stages = {s.get("stage"): s for s in doc.get("stages", [])}
+    if "plan" not in stages or "apply" not in stages:
+        return ["deploy pipeline must have a 'plan' and an 'apply' stage"]
+
+    plan_text = json.dumps(stages["plan"])
+    if "init -lockfile=readonly" not in plan_text:
+        problems.append("plan stage must run terraform init -lockfile=readonly")
+    plan_steps = stages["plan"].get("jobs", [{}])[0].get("steps", [])
+    plan_pub = next((s for s in plan_steps if "publish" in s), None)
+    if not plan_pub or "bundle" not in str(plan_pub.get("publish", "")):
+        problems.append("plan stage must publish only the explicit bundle directory")
+
+    dep = stages["apply"].get("jobs", [{}])[0]
+    if "environment" not in dep:
+        problems.append("apply must be a deployment job bound to an Environment (non-author approval)")
+    try:
+        steps = dep["strategy"]["runOnce"]["deploy"]["steps"]
+    except (KeyError, TypeError):
+        return problems + ["apply deployment job has no runOnce.deploy.steps"]
+
+    texts = [json.dumps(s) for s in steps]
+    apply_text = json.dumps(steps)
+
+    def first(substr: str) -> int:
+        return next((i for i, t in enumerate(texts) if substr in t), -1)
+
+    co = next((i for i, s in enumerate(steps) if s.get("checkout") == "self"), -1)
+    vi, ai, ri = first("pipeline.py verify"), first("terraform apply tfplan"), first("pipeline.py receipt")
+
+    if co < 0:
+        problems.append("apply deployment job must check out the repo (checkout: self) for the control files")
+    if vi < 0:
+        problems.append("apply job must run pipeline.py verify")
+    elif co >= 0 and co > vi:
+        problems.append("checkout must occur before verification")
+
+    if vi >= 0:
+        vt = texts[vi]
+        if "git rev-parse HEAD" not in vt:
+            problems.append("verify step must check the actual checked-out commit (git rev-parse HEAD)")
+        for flag in ("--repository", "--commit", "--environment", "--unit"):
+            if flag not in vt:
+                problems.append(f"verify step must pass {flag}")
+
+    if "init -lockfile=readonly" not in apply_text:
+        problems.append("apply stage must run terraform init -lockfile=readonly")
+    if ai < 0:
+        problems.append("apply stage must run terraform apply tfplan (the saved plan)")
+    if "terraform plan" in apply_text:
+        problems.append("apply stage must NOT run a second terraform plan")
+
+    if ri < 0:
+        problems.append("apply job must emit a receipt")
+    elif steps[ri].get("condition") != "always()":
+        problems.append("receipt step must use condition: always()")
+    pub = next((s for s in steps if s.get("publish") and "receipt" in json.dumps(s)), None)
+    if not pub or pub.get("condition") != "always()":
+        problems.append("receipt publication must use condition: always()")
+
+    return problems
 
 
 def self_test() -> list[str]:
@@ -350,21 +486,49 @@ def self_test() -> list[str]:
     # receipt for every terminal outcome.
     def receipt(**kw):
         out = Path(tempfile.mkdtemp()) / "r.json"
-        run(cmd_receipt, manifest=str(man), approver="reviewer@org", applied_at="2026-06-15T00:00:00+00:00", out=str(out), **kw)
+        run(cmd_receipt, manifest=str(man), approver="reviewer@org", completed_at="2026-06-15T00:00:00+00:00", out=str(out), **kw)
         return json.loads(out.read_text())
 
     r_ok = receipt(verify_result="success", apply_attempted="true", apply_result="success", apply_exit_code="0", pipeline_result="Succeeded")
     for k in ("repository", "commit", "unit", "environment", "profile", "artifact_hashes", "approver",
-              "verify_result", "apply_attempted", "apply_result", "apply_exit_code", "failure_phase", "pipeline_result", "applied_at"):
+              "verify_result", "apply_attempted", "apply_result", "apply_exit_code", "failure_phase", "pipeline_result", "completed_at"):
         if k not in r_ok:
             problems.append(f"receipt missing field {k}")
     if r_ok["failure_phase"] != "none" or r_ok["artifact_hashes"] != m["hashes"]:
         problems.append("successful receipt must have failure_phase 'none' and the manifest hashes")
-    if receipt(verify_result="failed", apply_attempted="false", apply_result="not_attempted", apply_exit_code="-1", pipeline_result="Failed")["failure_phase"] != "verify":
-        problems.append("a failed-verify receipt must record failure_phase 'verify'")
+    if r_ok.get("applied_at") is None or r_ok.get("completed_at") is None:
+        problems.append("a successful receipt must have both completed_at and applied_at")
+    r_verify = receipt(verify_result="failed", apply_attempted="false", apply_result="not_attempted", apply_exit_code="-1", pipeline_result="Failed")
+    if r_verify["failure_phase"] != "verify" or r_verify.get("applied_at") is not None or r_verify.get("completed_at") is None:
+        problems.append("a failed-verify receipt must record failure_phase 'verify', completed_at, and applied_at=null")
     r_fail = receipt(verify_result="success", apply_attempted="true", apply_result="failed", apply_exit_code="1", pipeline_result="Failed")
-    if r_fail["failure_phase"] != "apply" or r_fail["apply_exit_code"] != 1:
-        problems.append("a failed-apply receipt must record failure_phase 'apply' and the exit code")
+    if r_fail["failure_phase"] != "apply" or r_fail["apply_exit_code"] != 1 or r_fail.get("applied_at") is not None:
+        problems.append("a failed-apply receipt must record failure_phase 'apply', the exit code, and applied_at=null")
+
+    # descriptor / profile must be git-anchored: a replaced bundle descriptor or a
+    # manifest profile that disagrees with the committed descriptor is refused.
+    good_desc = (root / "vitruvius.yaml").read_text()
+    (root / "vitruvius.yaml").write_text(good_desc + "\n# tampered\n")
+    if verify(root, man) == 0:
+        problems.append("verify MUST refuse a bundle descriptor that differs from the committed one")
+    (root / "vitruvius.yaml").write_text(good_desc)
+    if verify_mutated(root, man, lambda x: x.update(profile="platform-baseline/v1")) == 0:
+        problems.append("verify MUST refuse a manifest profile that disagrees with the committed descriptor")
+
+    # canonical unit: normalize, and refuse absolute / traversal / outside-repo / empty.
+    if canonical_unit("examples/./workload-onboarding/") != "examples/workload-onboarding":
+        problems.append("canonical_unit must normalize a repo-relative path")
+    for bad_unit in ("/etc/passwd", "../outside", "examples/../../etc", "", "C:/x"):
+        try:
+            canonical_unit(bad_unit)
+            problems.append(f"canonical_unit must reject {bad_unit!r}")
+        except PipelineError:
+            pass
+    if verify(root, man, unit="../escape") == 0:
+        problems.append("verify MUST refuse a non-canonical / escaping deployable unit")
+
+    # static Azure Pipelines contract test (YAML, not runtime).
+    problems.extend(contract_test())
 
     # gate refuses (and writes no manifest) on a non-conformant plan.
     bad = stage("plan.regulated-noncompliant.json")
@@ -399,7 +563,7 @@ def main() -> int:
     r.add_argument("--apply-result", required=True, dest="apply_result")
     r.add_argument("--apply-exit-code", required=True, dest="apply_exit_code")
     r.add_argument("--pipeline-result", required=True, dest="pipeline_result")
-    r.add_argument("--applied-at", dest="applied_at", default=None)
+    r.add_argument("--completed-at", dest="completed_at", default=None)
     r.add_argument("--out", required=True)
 
     ap.add_argument("--self-test", action="store_true")

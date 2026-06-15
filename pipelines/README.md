@@ -18,20 +18,25 @@ plan stage  (checkout)
 
 ── approval ──  the Environment requires an approver who is not the author (ADR 0007)
 
-apply stage  (checkout — the control files come from the repo at the gate's commit)
+apply stage  (checkout the repo at the gate's commit; the orchestration checks the actually
+              checked-out commit, git rev-parse HEAD, equals the requested one before verifying)
   download the bundle
   pipeline.py verify   FAIL CLOSED: reject an unsupported/missing manifest_version, missing or
                        unexpected hash keys, missing required fields, a runtime identity
-                       (repository/commit/environment/unit) that differs from the manifest, any
-                       artifact whose hash changed, or a relied-upon exemption now expired.
+                       (repository/commit/environment/canonical unit) that differs from the
+                       manifest, a bundle descriptor or selected profile that differs from the
+                       committed one at the pinned commit, any artifact whose hash changed, or a
+                       relied-upon exemption now expired.
   terraform init -lockfile=readonly ; terraform apply tfplan   (the verified saved plan; no re-plan)
-  pipeline.py receipt  emitted for EVERY terminal outcome (always())
+  pipeline.py receipt  emitted for every handled verify/apply outcome (always())
   publish the receipt  (always())
 ```
 
 ## What the manifest binds (the verdict inputs)
 
 Eight SHA-256 hashes — the plan and the everything that decided it: `tfplan` (binary), `tfplan.json`, `vitruvius.yaml`, the resolved **profile**, the **evaluator**, the **descriptor schema**, the **exemption registry**, and this **controller** (`pipeline.py`). The exemption registry is bound even though apply does not re-evaluate, because it shaped the original verdict; the manifest also records which exemptions were *relied on* and their expiry, and apply refuses if one has since expired. `verify` re-checks the runtime identity (repository, commit, environment, deployable unit) against the manifest, not merely copies it forward.
+
+**Descriptor and profile selection are git-anchored.** The manifest is unsigned, so a swapped bundle descriptor could otherwise select a weaker existing profile and carry that profile's valid hash forward. `verify` therefore reads the descriptor committed at the pinned commit (`<unit>/vitruvius.yaml`), requires the bundle descriptor to equal it byte-for-byte, requires the manifest profile to equal the committed descriptor's profile, and resolves the profile file to hash from that committed descriptor — never solely from the unsigned manifest. The deployable unit is canonicalized to one confined repo-relative path (absolute paths, `..` traversal, and anything resolving outside the repo are refused), so `repository + commit + canonical unit` is a stable identity used identically at plan and apply.
 
 ## The guarantee — stated precisely
 
@@ -53,7 +58,7 @@ Both `tfplan` (binary) and `tfplan.json` can contain sensitive values (resource 
 ## Security limitations of the reference implementation
 
 - **No live execution here.** CI has no Azure credentials, so the slice is proven against committed fixtures, not a live apply.
-- **Integrity, not provenance.** SHA-256 over the verdict inputs detects tampering between gate and apply; it is not a signature, and the manifest travels in the same bundle it attests. Signed artifacts / an out-of-band anchor are a future hardening, deliberately out of this slice.
+- **Integrity, not provenance.** SHA-256 over the verdict inputs detects tampering between gate and apply, and descriptor/profile selection is anchored to git (above), so a swapped descriptor or profile is caught. But the manifest is *not* signed and travels in the same bundle it attests: a coordinated replacement of both the bundle and its manifest remains possible until artifact signing / an out-of-band anchor is added — deliberately out of this slice. The receipt is likewise integrity-checked, not signed provenance.
 - **Approver identity.** Azure DevOps does not expose the approving identity as a first-class pipeline variable; the receipt's `approver` is sourced from an org-wired `$(APPROVER)` (or the Environment approval API) — only as trustworthy as that wiring.
 - **Trust boundary.** The gate trusts the plan JSON Terraform produced; a compromised plan-producing agent is out of scope (the managed-only, fail-closed evaluation bounds but does not eliminate this).
 
