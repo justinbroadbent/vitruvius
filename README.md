@@ -38,32 +38,41 @@ vitruvius/
     composition.md          # how modules layer; what shapes are forbidden
     anti-patterns.md        # the failure modes the design exists to prevent
     ai-usage.md             # what AI is used for (and explicitly NOT used for)
+    implementation-status.yaml   # source: per-ADR built-vs-planned status
+    IMPLEMENTATION-STATUS.md     # generated from it (drift-gated in CI)
     decisions/              # ADRs (each cites the anti-patterns it addresses)
       README.md             # generated index, grouped by category and status
   modules/
-    foundation/             # naming, tags, diagnostic-settings, identity
+    foundation/             # naming, tags, diagnostic-settings, identity, policy-baseline
     networking/             # hub (VNet, private DNS, AMPLS); firewall + spokes planned
     platform-services/      # observability-substrate; planned: secrets, container-registry
     workload-patterns/      # web-api-aks; planned: function-event-driven,
                             # data-pipeline, apim-bff (the SaaS-core integration shape)
   examples/
     reference-landingzone/  # composition end-to-end: foundation + platform-services wired
+    workload-onboarding/    # the app team's side: consuming the golden path
+                            # (both carry a vitruvius.yaml conformance descriptor — ADR 0025)
     saas-core-integration/  # planned: AWS-hosted SaaS core ↔ Azure platform — illustrative
     legacy-replatform/      # planned: vendor BPM/data platforms → Azure-native
+  profiles/                 # conformance profiles checked against a root's plan (ADR 0025)
   policies/
     ncua-glba/              # Azure Policy as code, mapped to NIST CSF / GLBA Safeguards
   concepts/
     README.md               # what concepts/ is for
     ai-chat-corpus/         # sketch: RAG chat over the repo
   schemas/
-    module-manifest.schema.json  # JSON Schema for every module's manifest.yaml
+    module-manifest.schema.json        # JSON Schema for every module's manifest.yaml
+    conformance-descriptor.schema.json # JSON Schema for a root's vitruvius.yaml (ADR 0025)
   scripts/
-    generate-adr-index.ps1   # regenerates docs/decisions/README.md from frontmatter (PowerShell, zero external deps)
-    validate-manifests.py    # schema + manifest-vs-code coherence for every module (runs in CI)
-    generate-catalog-info.py # regenerates each module's catalog-info.yaml from its manifest (drift-gated in CI)
+    generate-adr-index.ps1           # regenerates docs/decisions/README.md from frontmatter (PowerShell, zero deps)
+    validate-manifests.py            # schema + manifest-vs-code coherence for every module (runs in CI)
+    generate-catalog-info.py         # regenerates each module's catalog-info.yaml from its manifest (drift-gated)
+    generate-control-map.py          # regenerates the NCUA/GLBA control map from declared mappings (drift-gated)
+    generate-implementation-status.py # regenerates IMPLEMENTATION-STATUS.md; fails if an accepted ADR lacks an entry
+    evaluate-conformance.py          # the ADR 0025 plan-policy gate (self-tested against plan fixtures in CI)
   .github/
     workflows/
-      ci.yml                # fmt, validate, terraform test, manifest validation, catalog + ADR index drift checks
+      ci.yml                # fmt, validate, terraform test, manifest validation, all drift checks, conformance self-test
     copilot-instructions.md # → AGENTS.md
 ```
 

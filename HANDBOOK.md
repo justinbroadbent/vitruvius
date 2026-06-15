@@ -95,6 +95,7 @@ vitruvius/
     golden-paths.md          # the golden-path contract and the six cross-cutting concerns
     composition.md           # how modules layer; which shapes are forbidden
     anti-patterns.md         # the twelve failure modes
+    IMPLEMENTATION-STATUS.md # generated: where each accepted ADR stands (built vs planned)
     decisions/               # 22 plain-language ADRs + a generated index
   modules/
     foundation/              # naming, tags, diagnostic-settings, identity, policy-baseline
@@ -104,8 +105,10 @@ vitruvius/
   examples/
     reference-landingzone/   # the assembler: the platform team's side, wired end to end
     workload-onboarding/     # the app team's side: consuming the golden path
+                             # each root carries a vitruvius.yaml conformance descriptor
+  profiles/                  # conformance profiles checked against a root's plan (ADR 0025)
   policies/ncua-glba/        # declared control mappings + the generated control map
-  schemas/                   # JSON Schema for the module manifests
+  schemas/                   # JSON Schema for module manifests and the conformance descriptor
   scripts/                   # the validators and generators CI runs
   .github/workflows/ci.yml   # the checks (see "What the checks prove")
 ```
@@ -158,12 +161,13 @@ Every push runs, in CI:
 - **Manifest validation** — every module's manifest parses, validates against the JSON Schema, and **agrees with the module's actual code**: inputs mirror `variables.tf` (names and required-ness, both directions), outputs mirror `outputs.tf`, declared dependencies match what's really used, declared policy and monitoring artifacts actually exist, examples and tests on disk are all declared, and every cited decision and anti-pattern resolves. Every policy JSON is syntax-checked.
 - **Generated views can't drift** — four derived documents are regenerated on every pull request and fail the build if they don't match their source: the ADR index (from the decisions' own metadata), each module's Backstage `catalog-info.yaml` (from its manifest), the compliance control map (from the declared mappings — which also fails if a mapping references a policy file that no longer exists), and the implementation-status report (from `docs/implementation-status.yaml` — which also fails if an accepted ADR has no status entry).
 - **Coverage by construction** — the lists of modules and examples to check are *discovered from the repository*, not hand-maintained, so a new module physically cannot merge without CI coverage.
+- **The conformance gate is self-tested** — the ADR 0025 plan-policy evaluator runs against plan fixtures on every push: a compliant plan passes, a non-compliant one fails on the real properties, and an exemption waives. That proves the gate's logic; feeding it a *real* rendered plan on every PR waits on the deployment pipeline.
 
 > **In plain terms:** the spec sheet can't lie about the code, the catalog can't lie about the modules, the compliance map can't lie about the rules, and nothing ships untested — and none of that depends on a human remembering to check. The clearest way to see each gate is to break it: rename a policy the control map cites and the build refuses.
 
 The catalog half of this was validated against the real consumer: a throwaway Backstage instance ingested the generated entities — one Domain, four Systems, eight Components — with zero schema errors, then was deleted. The claim "point your Backstage at this repo and the catalog populates" is a tested fact, while *operating* a portal still waits for its triggers (ADR 0016).
 
-**And honestly:** several controls are decided but not yet built — the plan-time conformance gate that evaluates a deployment's rendered plan against its declared profile (ADR 0025), the *deployment* pipeline that carries the change controls (the generated ledger, the gated exact-plan apply, the break-glass back-fill — ADRs 0007/0020), static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, and scheduled drift detection. [`docs/IMPLEMENTATION-STATUS.md`](./docs/IMPLEMENTATION-STATUS.md) is the canonical decided-vs-built-vs-effective list — one entry per accepted ADR, generated from structured data and drift-checked in CI — and the rule of the house is that audit-facing text never describes a planned control as live.
+**And honestly:** several controls are decided but not yet built — feeding a *real* rendered plan into the conformance gate on every pull request (ADR 0025's evaluator and profiles are built and fixture-tested; the live wiring needs the pipeline named next), the *deployment* pipeline that carries the change controls (the generated ledger, the gated exact-plan apply, the break-glass back-fill — ADRs 0007/0020), static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, and scheduled drift detection. [`docs/IMPLEMENTATION-STATUS.md`](./docs/IMPLEMENTATION-STATUS.md) is the canonical decided-vs-built-vs-effective list — one entry per accepted ADR, generated from structured data and drift-checked in CI — and the rule of the house is that audit-facing text never describes a planned control as live.
 
 ---
 
