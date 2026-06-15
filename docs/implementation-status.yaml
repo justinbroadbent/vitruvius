@@ -1,0 +1,132 @@
+# Authored source for the implementation-status report — the "decided vs built
+# vs effective" line, as data rather than scattered prose. docs/IMPLEMENTATION-
+# STATUS.md is GENERATED from this file by scripts/generate-implementation-
+# status.py and drift-checked in CI. Never edit the report by hand.
+#
+# Every accepted ADR (docs/decisions/NNNN-*.md with status: accepted) must have
+# an entry here, or CI fails — a new decision cannot silently dodge the report.
+#
+# status vocabulary (controlled):
+#   implemented — the decision's mechanisms are built in this repo and exercised in CI or the examples.
+#   partial     — some mechanisms are built; the rest are named under `planned`.
+#   decided     — accepted as a contract; no implementation lives in this repo yet (adopter- or future-side).
+#   proposed    — still an open RFC, not yet accepted.
+#
+# `built` / `planned` are short, honest phrases. `tracking` lists open issue
+# numbers where a planned item has one.
+
+decisions:
+  - adr: ADR-0001
+    status: implemented
+    built: [IaC is Terraform built on pinned Azure Verified Modules; no hand-rolled azurerm wrappers.]
+    planned: []
+
+  - adr: ADR-0002
+    status: partial
+    built: [The emission target is configuration; modules emit through the substrate.]
+    planned: [The OpenTelemetry collector deployment — lands with the first workload that needs it.]
+
+  - adr: ADR-0003
+    status: implemented
+    built: [Modules ship the policy and monitoring for what they create; the manifest validator enforces the `ships` contract.]
+    planned: []
+
+  - adr: ADR-0004
+    status: implemented
+    built: [Composition-by-output is enforced by the schema (repo dependencies forbidden) and the manifest validator.]
+    planned: []
+
+  - adr: ADR-0005
+    status: partial
+    built: [The central substrate (Log Analytics workspace + Application Insights) ships as a module.]
+    planned: [The OTel collector; signal parity across environments is an adopter operating contract.]
+
+  - adr: ADR-0006
+    status: decided
+    built: []
+    planned: [Runtime service mesh, the APIM cross-boundary front door, and the Backstage discovery layer are contracts only — none is deployed.]
+
+  - adr: ADR-0007
+    status: partial
+    built: [The change-as-code controls are validated in this repository's CI.]
+    planned: [The deployment pipeline that carries the ledger, gated apply, scheduled drift detection, and break-glass back-fill.]
+    tracking: [5]
+
+  - adr: ADR-0008
+    status: implemented
+    built: [Every policy bundle ships Audit-first defaults; exemptions are Azure-native and time-boxed.]
+    planned: [Promotion to Deny is the adopter's evidence-gated step, not a repo artifact.]
+
+  - adr: ADR-0009
+    status: partial
+    built: [The web-api-aks pattern uses workload-identity federation — no static secret exists to rotate.]
+    planned: [The secrets platform and customer-managed keys.]
+    tracking: [14]
+
+  - adr: ADR-0010
+    status: implemented
+    built: [foundation/tags ships the taxonomy and the policy initiative that enforces it estate-wide.]
+    planned: []
+
+  - adr: ADR-0011
+    status: implemented
+    built: [The manifest JSON Schema and validate-manifests.py run in CI; the manifest must agree with the code.]
+    planned: []
+
+  - adr: ADR-0012
+    status: partial
+    built: [The RFC-as-draft-PR practice is in use (ADR 0019 is a live RFC); the module status lifecycle is followed.]
+    planned: [Mechanical enforcement of no-self-approval and adoption-based promotion — today these are review conventions.]
+
+  - adr: ADR-0013
+    status: decided
+    built: []
+    planned: [The DORA metrics pipeline depends on the deployment ledger, which is not yet built.]
+
+  - adr: ADR-0014
+    status: decided
+    built: [The SLO discipline and the platform-builds-the-framework split are contracts.]
+    planned: [The deployment-descriptor field carrying each workload's SLO commitment (ADR 0025).]
+
+  - adr: ADR-0015
+    status: decided
+    built: [The DR discipline is a contract; some primitives (geo-redundancy, backup) come from AVM.]
+    planned: [The descriptor field for RTO/RPO commitments; restore drills are an adopter practice.]
+
+  - adr: ADR-0016
+    status: partial
+    built: [The catalog-info generator, the static catalog, and the drift gate ship and were validated against a real Backstage instance.]
+    planned: [Operating the Backstage portal itself.]
+
+  - adr: ADR-0017
+    status: decided
+    built: [The state contract (per-blast-radius, locked, split-from-the-start) is demonstrated in the reference root.]
+    planned: [The adopter provisions the actual state backend; the repo ships no state.]
+
+  - adr: ADR-0018
+    status: partial
+    built: [networking/hub ships the hub VNet, centralized private DNS, and the AMPLS.]
+    planned: [The firewall (default-deny egress enforcement) and the spoke modules.]
+    tracking: [9]
+
+  - adr: ADR-0020
+    status: partial
+    built: [Validation CI runs in GitHub Actions.]
+    planned: [The reference deployment pipeline on Azure DevOps — OIDC apply, the generated ledger, gated exact-plan apply, and break-glass back-fill.]
+    tracking: [5]
+
+  - adr: ADR-0021
+    status: partial
+    built: [The control-mapping contract, mappings.yaml, the generated control map, the drift gate, and exemplar control families.]
+    planned: [The full control catalog and the evidence pack.]
+    tracking: [13]
+
+  - adr: ADR-0024
+    status: implemented
+    built: [The scope-role vocabulary; the reference root resolves roles to real IDs.]
+    planned: []
+
+  - adr: ADR-0025
+    status: partial
+    built: [foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.]
+    planned: [The deployment descriptor, the conformance profiles, and the plan-time evaluator that checks a rendered plan before merge.]
