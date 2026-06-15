@@ -128,5 +128,6 @@ decisions:
 
   - adr: ADR-0025
     status: partial
-    built: [foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.]
-    planned: [The deployment descriptor, the conformance profiles, and the plan-time evaluator that checks a rendered plan before merge.]
+    built: [foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root., The conformance descriptor schema, the platform-baseline and regulated-workload profiles, and the plan-policy evaluator — proven in CI against plan fixtures (compliant passes, non-compliant fails, exemptions waive).]
+    planned: [Feeding a real rendered plan into the gate on every pull request — the deployment pipeline's job.]
+    tracking: [5]

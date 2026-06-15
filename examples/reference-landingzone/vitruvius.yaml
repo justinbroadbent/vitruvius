@@ -1,0 +1,11 @@
+apiVersion: vitruvius.io/v1
+kind: TerraformRoot
+metadata:
+  name: reference-landingzone
+  owner: platform-team
+spec:
+  scope: platform_management_group
+  profile: platform-baseline/v1
+  business-criticality: tier-1
+  data-classification: internal
+  exceptions: []
