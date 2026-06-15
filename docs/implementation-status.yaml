@@ -128,6 +128,6 @@ decisions:
 
   - adr: ADR-0025
     status: partial
-    built: [foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root., The conformance descriptor schema, the platform-baseline and regulated-workload profiles, and the plan-policy evaluator — proven in CI against plan fixtures (compliant passes, non-compliant fails, exemptions waive).]
-    planned: [Feeding a real rendered plan into the gate on every pull request — the deployment pipeline's job.]
+    built: [foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root., The conformance gate — descriptor schema, profiles, and evaluator — checks completeness (required capabilities present, forbidden ones absent), correctness (properties fail closed on missing values), and exemption lifecycle (owned, unexpired, rule-matched); all exercised in CI against plan fixtures.]
+    planned: [Feeding a real rendered plan into the gate on every PR (the deployment pipeline's job)., The descriptor driving classification/reliability tag-match rules (ADR 0025 section 5)., Relationship rules (e.g. diagnostics-per-resource) and the cross-root provides/requires capability graph.]
     tracking: [5]
