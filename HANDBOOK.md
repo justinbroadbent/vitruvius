@@ -67,7 +67,7 @@ A large part of the architecture is the deliberate avoidance of twelve specific 
 
 | # | The trap | The one-line cure |
 |---|---|---|
-| AP-001 | Bolted-on monitoring — a separate team adds dashboards later | Every module ships its own monitoring and policy (ADR 0003) |
+| AP-001 | Bolted-on monitoring — a separate team adds dashboards later | Every module ships the monitoring and policy for what it creates, or states that none apply (ADR 0003) |
 | AP-002 | Telemetry dumping ground — centralize everything, curate nothing | One central store *with enforced rules* — budgets, retention, owners (ADR 0005) |
 | AP-003 | Hard-coded service endpoints | "Find each other" is three problems; use three tools (ADR 0006) |
 | AP-004 | Configuration drift — hand fixes diverge from code | Read-only production; emergencies captured back into code (ADR 0007) |
@@ -124,7 +124,7 @@ One shape repeats across all eight, and it's worth spotting: a module **takes na
 
 **`foundation/identity`** — deliberately tiny. Two managed identities (Azure-native identities with no passwords): one for the deployment pipeline, one for policy remediation. It grants them no permissions itself — that's the adopter's call, made in the open at the assembly point.
 
-**`foundation/policy-baseline`** — the estate guardrail, and the answer to "what stops someone standing up a public App Service?" Assigned at a management group, it ships the mandatory rules every subscription beneath it inherits — App Service public access disabled and HTTPS-only, Storage public-blob access denied, resources confined to approved regions — as block-or-watch policies (and because they *block* rather than *repair*, no remediation identity is needed, unlike the diagnostic safety net). Like every bundle it watches before it blocks (ADR 0008); one input promotes it to Deny. *Why it matters:* a golden path makes the right thing easy, but it's opt-in — this makes the wrong thing impossible, estate-wide, whether or not a team used a golden path (ADR 0025 §1).
+**`foundation/policy-baseline`** — the estate guardrail, and the answer to "what stops someone standing up a public App Service?" Assigned at a management group, it ships the mandatory rules every subscription beneath it inherits — App Service public access disabled and HTTPS-only, Storage public-blob access denied, resources confined to approved regions — as block-or-watch policies (and because they *block* rather than *repair*, no remediation identity is needed, unlike the diagnostic safety net). Like every bundle it watches before it blocks (ADR 0008); one input promotes it to Deny. *Why it matters:* a golden path makes the right thing easy, but it's opt-in — this makes the *defined* estate-level violations impossible, whether or not a team used a golden path (ADR 0025 §1).
 
 **`platform-services/observability-substrate`** — the central monitoring store: a Log Analytics workspace (the log store and query engine) plus workspace-based Application Insights (application performance monitoring), an alert-routing group, and a self-protection alert that fires if anyone attempts to delete the workspace. Private by default — and honestly so: both the workspace *and* Application Insights have public ingestion and query explicitly disabled (the upstream defaults disagree with each other, so this module sets them rather than trusting them), which makes a consumer-provided **Azure Monitor Private Link Scope (AMPLS)** a documented hard prerequisite for private operation, not a surprise. Its workspace ID output is the seam the whole observability story hangs on.
 
@@ -163,7 +163,7 @@ Every push runs, in CI:
 
 The catalog half of this was validated against the real consumer: a throwaway Backstage instance ingested the generated entities — one Domain, four Systems, eight Components — with zero schema errors, then was deleted. The claim "point your Backstage at this repo and the catalog populates" is a tested fact, while *operating* a portal still waits for its triggers (ADR 0016).
 
-**And honestly:** some controls are decided but not yet built — static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, scheduled drift detection. `docs/principles.md` § "How these are enforced" is the canonical live-vs-planned list, and the rule of the house is that audit-facing text never describes a planned control as live.
+**And honestly:** several controls are decided but not yet built — the plan-time conformance gate that evaluates a deployment's rendered plan against its declared profile (ADR 0025), the *deployment* pipeline that carries the change controls (the generated ledger, the gated exact-plan apply, the break-glass back-fill — ADRs 0007/0020), static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, and scheduled drift detection. `docs/principles.md` § "How these are enforced" is the canonical live-vs-planned list, and the rule of the house is that audit-facing text never describes a planned control as live.
 
 ---
 
@@ -180,7 +180,7 @@ A platform team brings the foundation up in roughly this order. Each step points
 3. **Create the state backend before anything else.** Terraform's record of what it built is a sensitive artifact (ADR 0017): a locked storage account, split per environment and per deployable unit from the start. Splitting state later is surgery; starting split costs nothing.
 4. **Provide the network prerequisites.** The observability substrate is private by default, which means it does not work until you supply an **AMPLS** wired to private DNS (ADR 0018). Stand up `networking/hub` first so the substrate — and later, your workloads' private endpoints — have somewhere private to land.
 5. **Copy `examples/reference-landingzone` as your platform root and fill in the blanks.** Org code, region, the management-group and subscription IDs from step 2, your address space. Every adopter-supplied value is validated at *plan* time with an error that names the actual mistake, so a wrong value costs a minute, not an afternoon's failed apply. This root wires naming → tags → identity → the substrate → diagnostic routing → the hub → the estate guardrails, each module's outputs feeding the next.
-6. **Run it through your pipeline.** Plan on the pull request; apply after a non-author approval, promoted environment by environment (ADR 0020). The reference CI is GitHub Actions; moving to Azure DevOps (or anything else) maps the same controls onto a different vendor and changes no architecture.
+6. **Run it through your pipeline.** Plan on the pull request; apply after a non-author approval, promoted environment by environment (ADR 0020). The repository's *validation* CI runs in GitHub Actions today; the reference *deployment* pipeline is Azure DevOps (ADR 0020), which the adopter wires up (#5). The controls are vendor-independent either way — another platform maps the same controls onto itself.
 7. **Turn enforcement on gradually.** Every policy bundle — the tag taxonomy, diagnostic routing, and the estate guardrails (`policy-baseline`) — ships in **Audit**. Watch for 30–90 days, confirm nothing legitimate trips, then promote to **Deny** with a single input, citing in the PR what the rule would have blocked (ADR 0008).
 8. **Onboard application teams.** Each team copies `examples/workload-onboarding` into its own repository, pins a workload-pattern module by release tag, and receives the platform's published facts — workspace ID, cluster issuer, subnet IDs — as explicit inputs. They consume the platform; they never read its state.
 
@@ -208,11 +208,18 @@ Every policy bundle follows one lifecycle (ADR 0008): **watch first, block with 
 
 The reasoning is incentive design, not caution: a blanket ban costs its author nothing and lands its pain on everyone else, which is exactly how engineers end up on unmanaged personal subscriptions. Evidence-gated enforcement reverses the incentive — and the one stated exception (rules protecting the monitoring system block from day one) shows the principle has edges, not just vibes. The estate-wide promotion judgment stays with the platform and security teams; what the modules guarantee is that the lifecycle is *cheap to follow and visible to audit*.
 
-That lifecycle governs *how* a rule turns on. A separate question is *which* rules a workload can't escape — and the answer isn't the golden path, because a golden path is opt-in, and ADR 0004 explicitly lets a team fork one and trim it. So the **mandatory** controls don't live in the workload's box at all: `foundation/policy-baseline` ships them as an estate guardrail assigned at the management group — no public App Services, HTTPS-only, no public blobs, approved regions — inherited by every subscription beneath it whether or not a team used a golden path. The rule (ADR 0025 §1): if leaving a control out would make the estate non-compliant, the platform owns whether it exists, not the workload. And at the gate, a deployment declares what *kind* of thing it is, and CI checks its plan against that profile before merge. Golden path makes compliance easy; the baseline makes non-compliance impossible; the conformance check proves it before it ships.
+That lifecycle governs *how* a rule turns on. A separate question is *which* rules a workload can't escape — and the answer isn't the golden path, because a golden path is opt-in, and ADR 0004 explicitly lets a team fork one and trim it. So the **mandatory** controls don't live in the workload's box at all: `foundation/policy-baseline` ships them as an estate guardrail assigned at the management group — no public App Services, HTTPS-only, no public blobs, approved regions — inherited by every subscription beneath it whether or not a team used a golden path. The rule (ADR 0025 §1): if leaving a control out would make the estate non-compliant, the platform owns whether it exists, not the workload. That half is **built** — `policy-baseline` assigns the guardrails as Azure Policy at the management group. The other half of ADR 0025 is **decided but not yet wired**: a deployment will declare a conformance *profile*, and a plan-time check will evaluate its rendered Terraform plan against that profile before merge (Part V lists it among the unbuilt controls). So today the golden path makes compliance easy, and the baseline makes the *defined estate-level* violations impossible whether or not a team used a golden path; the plan-time gate that proves a workload's own properties is the next thing to build.
+
+Four layers sit behind this — two built, two decided-but-ahead:
+
+- **Baseline rule** — applies because of *where* the deployment lives (its management group). *Built* (`policy-baseline`, Azure Policy).
+- **Azure Policy at runtime** — continuously re-checks the deployed estate, on any path in. *Built.*
+- **Profile rule** — applies because of *what* the deployment declares itself to be. *Decided, not built* (ADR 0025).
+- **Plan-time evaluation** — blocks bad *intent* against the rendered plan, before merge. *Decided, not built* (ADR 0025).
 
 ## The pipeline is controls, not a brand
 
-What auditors need from change management is outcomes: who changed what, who approved it, can the author approve themselves, what happens in an emergency. So the decision (ADRs 0007, 0020) fixes the *controls* — read-only production for humans, the reviewed PR as the change record, deploys gated by a non-author approver and promoted environment by environment, OIDC-federated pipeline identity with no stored credentials, an automatic deployment ledger, break-glass that is captured back into code within 24 hours rather than forbidden into the shadows — and treats the CI/CD product as configuration. This repository's own CI is the live partial implementation; the Azure DevOps port is tracked (#5). An adopter with a different pipeline loses nothing, because the controls were never about the vendor.
+What auditors need from change management is outcomes: who changed what, who approved it, can the author approve themselves, what happens in an emergency. So the decision (ADRs 0007, 0020) fixes the *controls* — read-only production for humans, the reviewed PR as the change record, deploys gated by a non-author approver and promoted environment by environment, OIDC-federated pipeline identity with no stored credentials, an automatic deployment ledger, break-glass captured back into code within 24 hours rather than forbidden into the shadows — and treats the CI/CD product as configuration. What runs today is the repository's *validation* CI (GitHub Actions); the *deployment* pipeline that carries the ledger, the gated exact-plan apply, and the break-glass back-fill is the reference Azure DevOps design (ADR 0020), not yet built (#5). An adopter with a different pipeline loses nothing, because the controls were never about the vendor.
 
 ## Compliance partners get artifacts, not blank pages
 
@@ -294,7 +301,7 @@ The split that repeats three times (0013, 0014, 0015): **the platform builds the
 |---|---|
 | 0001 | Terraform on the trusted AVM catalog; don't rebuild plumbing. |
 | 0002 | Collect monitoring in one open format; the vendor is a setting. |
-| 0003 | Every module ships its own rules and monitoring. |
+| 0003 | Every module ships the rules and monitoring for what it creates (or states none apply). |
 | 0004 | Wire modules by outputs into inputs; no master module. |
 | 0005 | One curated central monitoring store; equal coverage everywhere. |
 | 0006 | "Find each other" is three problems; use three tools. |
@@ -313,7 +320,7 @@ The split that repeats three times (0013, 0014, 0015): **the platform builds the
 | 0020 | A passwordless, gated pipeline that records every release. |
 | 0021 | Generate the compliance map from the rules so it can't go stale. |
 | 0024 | Attach to the customer's account tree by role; don't reinvent it. |
-| 0025 | A deployment declares what it is; CI proves its plan conforms; mandatory controls are platform-owned. |
+| 0025 | Mandatory controls are platform-owned (built); a declared profile is checked against the plan before merge (planned). |
 
 Numbering is monotonic, not dense: a gap is a seat held for a decision, not a deleted record. **ADR 0019** (platform identity and privileged access — group-based access, just-in-time elevation, break-glass, separation of duties) has graduated from reserved slot to **open draft RFC**, accumulating comment per ADR 0012 before anyone may call it accepted — the collaborative process running in public, not described. **0022** (customer-managed keys and the secrets platform, #14) and **0023** (FinOps as a cross-cutting concern, #16) remain reserved.
 
@@ -324,6 +331,8 @@ Numbering is monotonic, not dense: a gap is a seat held for a decision, not a de
 This section is easy to mistake for a to-do list. It is the opposite: each item was *deliberately* not built, because building it would have meant guessing about a real organization that isn't known yet. For each: what's decided, what's open, and what would make it time to build.
 
 - **The firewall — but no longer the hub.** `networking/hub` now ships the decided core (hub VNet, centralized private DNS, the AMPLS) and the non-firewall half of ADR 0018 §6's output contract. What stays deferred is egress *enforcement*: firewall product, SKU, and rule shape wait for a real estate's requirements (issue #9), and the control map declares the resulting `csf:PR.AC-5` gap explicitly rather than hiding it — the deferral and the compliance story tell one consistent truth.
+- **The conformance gate — but no longer the baseline.** `policy-baseline` ships and is assigned in the reference root, so the *platform-owned* half of ADR 0025 is built: estate guardrails every subscription inherits. What stays deferred is the workload-facing half — the deployment descriptor (which profile a root declares), the conformance profiles themselves, and the plan-time evaluator that renders `terraform show -json` and checks it against the profile before merge. The decision is made (ADR 0025); the schema, the profiles, and the evaluator are the build.
+- **The deployment pipeline.** The change controls are decided (ADRs 0007, 0020) and the repository's validation CI runs in GitHub Actions, but the reference *deployment* pipeline — OIDC-federated apply, the generated tamper-evident ledger, the gated exact-plan promotion, and the break-glass back-fill — is the Azure DevOps design (#5), not yet built.
 - **The OTel collector deployment.** The most load-bearing unbuilt artifact in the observability story — the substrate it writes into is real; the collector runs on application compute and lands with the first workload that needs it.
 - **The Backstage portal — but no longer the catalog.** The generator shipped, and the contract was validated against a real Backstage instance (it ingested everything cleanly, then was deleted). What remains deferred is exactly what should be: *operating* a portal, which waits for an estate to catalog, enough services that a portal beats a spreadsheet, and a named operator.
 - **The compliance control catalog — but no longer the machine.** The generator and drift gate run in CI, and two exemplar control families ship as concrete claims. What remains deferred is the *content* judgment — which controls, satisfied by which policies, to which examiner's standard — because that belongs to the security and compliance partners (#13), and a platform team answering it alone is the seagull trap in compliance clothing.
@@ -368,7 +377,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Control / control map.** A specific security or compliance requirement (e.g. from NIST CSF), and the document saying which rule enforces each. Generated, never hand-kept (ADR 0021).
 
-**Deployment ledger.** The automatic, tamper-evident record of every deployment: which change, which version, where, who approved. Audit record and metrics source in one.
+**Deployment ledger.** The intended automatic, tamper-evident record of every deployment — which change, which version, where, who approved — both audit record and metrics source (ADR 0020). Part of the deployment pipeline that is decided but not yet built.
 
 **Diagnostic settings.** Azure's "send this resource's logs to a workspace" feature. The safety-net module ensures it's set everywhere.
 
@@ -376,7 +385,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Drift.** When the real system diverges from what the code says — usually a hand-edit. Detected on a schedule; emergencies are captured, not forbidden.
 
-**Egress.** Outbound network traffic. Denied by default; exits only through the hub's audited choke point (ADR 0018).
+**Egress.** Outbound network traffic. The decided posture is default-deny — exits only through the hub's audited choke point (ADR 0018) — but enforcement waits on the firewall, so today it remains an explicit gap (Part V).
 
 **Error budget.** The allowed slice of failure inside a reliability target. Spend it, and risky changes pause (ADR 0014).
 
