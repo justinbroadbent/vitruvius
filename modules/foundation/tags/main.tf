@@ -16,14 +16,11 @@ locals {
 
   tags = merge(local.required_tags, local.optional_tags)
 
-  # Vocabulary metadata. Surfaced as an output so consumers and Backstage can
-  # render allowed-values dropdowns from a single source of truth.
-  vocabularies = {
-    env                  = ["prod", "staging", "dev", "sandbox"]
-    data_classification  = ["public", "internal", "confidential", "restricted"]
-    business_criticality = ["tier-0", "tier-1", "tier-2", "tier-3"]
-    lifecycle            = ["stable", "experimental", "deprecated"]
-  }
+  # Vocabulary metadata, from the single authored source (vocabularies.yaml).
+  # Surfaced as an output so consumers and Backstage can render allowed-values
+  # dropdowns; the policy-JSON invariant below checks the shipped policies still
+  # match it. Other representations are drift-checked by scripts/validate-vocabularies.py.
+  vocabularies = yamldecode(file("${path.module}/vocabularies.yaml"))
 
   deploy_policy = var.policy_management_group_id != null
 

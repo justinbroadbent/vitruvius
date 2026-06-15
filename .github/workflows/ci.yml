@@ -63,6 +63,8 @@ jobs:
           python-version: '3.12'
       - run: pip install pyyaml jsonschema
       - run: python scripts/validate-manifests.py
+      - name: Vocabulary single-source drift check (ADR 0010)
+        run: python scripts/validate-vocabularies.py
       - name: Regenerate catalog-info.yaml from manifests
         run: python scripts/generate-catalog-info.py
       - name: Verify catalog files match manifests

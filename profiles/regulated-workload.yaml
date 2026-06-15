@@ -70,3 +70,14 @@ spec:
       in: [eastus, eastus2]
       on_missing: skip
       cites: []
+
+    # §5: the plan must not contradict the descriptor's classification. The
+    # resource group (the tag source) carries the exact values; storage holding
+    # member data must carry them directly (inheritance not acceptable for it);
+    # any resource that explicitly tags otherwise is a contradiction. Resources
+    # that simply omit the tags are fine — Azure Policy inherits them from the RG.
+    - id: tags.match-descriptor
+      kind: tags_match_descriptor
+      resource_group_types: [azurerm_resource_group]
+      direct_tag_required: [azurerm_storage_account]
+      cites: [csf:PR.DS-1]

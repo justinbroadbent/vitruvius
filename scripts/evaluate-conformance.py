@@ -94,10 +94,17 @@ def iter_resources(plan: dict):
     yield from walk(plan.get("planned_values", {}).get("root_module", {}))
 
 
-def _matching(resources: list, types: list) -> list:
-    if "*" in types:
-        return list(resources)
-    return [r for r in resources if r["type"] in types]
+def _matching(resources: list, types: list, include_data: bool = False) -> list:
+    out = []
+    for r in resources:
+        # Data sources are not resources this root configures — they must not
+        # satisfy require_resource, trigger forbid_resource, or be asserted on.
+        # mode == "managed" is the default proof boundary (absent mode = managed).
+        if not include_data and r.get("mode", "managed") != "managed":
+            continue
+        if "*" in types or r["type"] in types:
+            out.append(r)
+    return out
 
 
 def _assert_one(rule: dict, res: dict) -> str | None:
@@ -161,7 +168,8 @@ def evaluate(descriptor: dict, plan: dict, profiles_dir: Path = PROFILES_DIR, re
 
     for rule in profile["spec"]["rules"]:
         kind = rule.get("kind", "assert_property")
-        rid, types, cites = rule["id"], rule["resource_types"], rule.get("cites", [])
+        rid, cites = rule["id"], rule.get("cites", [])
+        types = rule.get("resource_types", ["*"])
         if kind == "assert_property":
             for res in _matching(resources, types):
                 detail = _assert_one(rule, res)
@@ -172,11 +180,34 @@ def evaluate(descriptor: dict, plan: dict, profiles_dir: Path = PROFILES_DIR, re
             found = len(_matching(resources, types))
             if found < minimum:
                 failures.append({"rule": rid, "resource": "(plan)",
-                                 "detail": f"requires ≥{minimum} of {types}; found {found}", "cites": cites})
+                                 "detail": f"requires ≥{minimum} managed of {types}; found {found}", "cites": cites})
         elif kind == "forbid_resource":
             for res in _matching(resources, types):
                 failures.append({"rule": rid, "resource": res["address"],
                                  "detail": f"resource type {res['type']} is forbidden", "cites": cites})
+        elif kind == "tags_match_descriptor":
+            # §5: the descriptor declares the workload's classification; the plan must
+            # not contradict it. The resource group (the tag source) must carry the exact
+            # values; any managed resource that *explicitly* carries a controlled tag must
+            # agree; types the profile names as direct-tag-required must carry them. A
+            # resource with no controlled tag is fine — Azure Policy inherits it from the
+            # RG (we do not guess universal taggability or duplicate the runtime layer).
+            expected = {"data-classification": spec.get("data-classification"),
+                        "business-criticality": spec.get("business-criticality")}
+            rg_types = rule.get("resource_group_types", ["azurerm_resource_group"])
+            direct_types = rule.get("direct_tag_required", [])
+            for res in _matching(resources, ["*"]):
+                tags = res.get("values", {}).get("tags") or {}
+                must_carry = res["type"] in rg_types or res["type"] in direct_types
+                for tagkey, want in expected.items():
+                    have = tags.get(tagkey)
+                    if have is None:
+                        if must_carry:
+                            failures.append({"rule": rid, "resource": res["address"],
+                                             "detail": f"{tagkey} tag missing; this type must carry it directly (want {want!r})", "cites": cites})
+                    elif have != want:
+                        failures.append({"rule": rid, "resource": res["address"],
+                                         "detail": f"{tagkey}={have!r} contradicts the descriptor ({want!r})", "cites": cites})
         else:
             raise ConformanceError(f"unknown rule kind '{kind}' in rule '{rid}'")
 
@@ -225,7 +256,7 @@ def self_test() -> list[str]:
     # 3. A non-compliant plan fails on every rule kind (assert, require, forbid).
     kept, _ = evaluate(reg, noncompliant, registry={})
     expected = {"keyvault.no-public-access", "storage.no-public-blob", "location.approved-regions",
-                "identity.workload-federation-required", "identity.no-static-secret"}
+                "identity.workload-federation-required", "identity.no-static-secret", "tags.match-descriptor"}
     got = {k["rule"] for k in kept}
     if got != expected:
         problems.append(f"non-compliant fixture failures {sorted(got)} != expected {sorted(expected)}")
@@ -250,6 +281,30 @@ def self_test() -> list[str]:
         kept, find = evaluate(_descriptor("regulated-workload/v1", [{"rule": "keyvault.no-public-access", "exemption": exid}]), noncompliant, registry=registry)
         if "keyvault.no-public-access" not in {k["rule"] for k in kept} or not find:
             problems.append(f"{why} exemption ({exid}) must NOT waive and must raise a finding")
+
+    # 6. Data sources are ignored — a data-source of a required type does not satisfy require_resource.
+    kept, _ = evaluate(reg, fx("plan.data-source-ignored.json"), registry={})
+    if "identity.workload-federation-required" not in {k["rule"] for k in kept}:
+        problems.append("a data-source federated identity must NOT satisfy require_resource (managed-only proof boundary)")
+
+    # 7. §5 tag matching: classification/criticality contradictions fail; non-taggable resources skip.
+    def _plan(*rs):
+        return {"planned_values": {"root_module": {"resources": list(rs), "child_modules": []}}}
+
+    def _r(t, a, **v):
+        return {"type": t, "address": a, "mode": "managed", "values": v}
+
+    fic = _r("azurerm_federated_identity_credential", "fic")
+    for label, tags in [("data-classification", {"data-classification": "restricted", "business-criticality": "tier-1"}),
+                        ("business-criticality", {"data-classification": "confidential", "business-criticality": "tier-0"})]:
+        plan = _plan(fic, _r("azurerm_resource_group", "rg", location="eastus", tags=tags))
+        if "tags.match-descriptor" not in {k["rule"] for k in evaluate(reg, plan, registry={})[0]}:
+            problems.append(f"a resource-group {label} contradicting the descriptor must fail tags.match-descriptor")
+
+    ok_rg = _r("azurerm_resource_group", "rg", location="eastus", tags={"data-classification": "confidential", "business-criticality": "tier-1"})
+    skipped = _plan(fic, ok_rg, _r("azurerm_role_assignment", "ra"))
+    if {k["rule"] for k in evaluate(reg, skipped, registry={})[0]}:
+        problems.append("a non-taggable resource with no controlled tags must be skipped, not failed")
 
     return problems
 

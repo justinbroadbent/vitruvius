@@ -1,0 +1,12 @@
+# Single authored source for the vocabulary-controlled tags (ADR 0010). Every
+# other representation is derived from this file or drift-checked against it by
+# scripts/validate-vocabularies.py:
+#   - local.vocabularies in main.tf      — derived (yamldecode); the tags output
+#                                          and the policy-JSON invariant follow it
+#   - the variable validations in variables.tf — drift-checked
+#   - the allowed-values-*.json policies — drift-checked
+#   - the conformance descriptor enums (ADR 0025 §5) — drift-checked
+env: [prod, staging, dev, sandbox]
+data_classification: [public, internal, confidential, restricted]
+business_criticality: [tier-0, tier-1, tier-2, tier-3]
+lifecycle: [stable, experimental, deprecated]
