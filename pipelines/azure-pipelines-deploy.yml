@@ -33,6 +33,14 @@ stages:
       - job: plan_and_gate
         steps:
           - checkout: self
+          - bash: |
+              set -euo pipefail
+              # Canonicalize BEFORE any Terraform: an absolute/traversing/outside-repo
+              # unit is rejected here, so Terraform never runs in the wrong place.
+              CANON="$(python scripts/pipeline.py canonical-unit --unit "$(TF_ROOT)")"
+              echo "##vso[task.setvariable variable=CANONICAL_UNIT]$CANON"
+              echo "canonical deployable unit: $CANON"
+            displayName: Preflight — canonicalize the deployable unit (before any Terraform)
           - task: AzureCLI@2
             displayName: terraform plan -out=tfplan ; show -json
             inputs:
@@ -41,25 +49,25 @@ stages:
               scriptLocation: inlineScript
               inlineScript: |
                 set -euo pipefail
-                cd "$(TF_ROOT)"
-                test -f .terraform.lock.hcl || { echo "##vso[task.logissue type=error]no committed .terraform.lock.hcl in $(TF_ROOT)"; exit 1; }
+                cd "$(CANONICAL_UNIT)"
+                test -f .terraform.lock.hcl || { echo "##vso[task.logissue type=error]no committed .terraform.lock.hcl in $(CANONICAL_UNIT)"; exit 1; }
                 terraform init -lockfile=readonly        # provider selection is pinned by the committed lockfile
                 terraform plan -out=tfplan
                 terraform show -json tfplan > tfplan.json
           - script: |
               set -euo pipefail
               python scripts/pipeline.py gate \
-                --root "$(TF_ROOT)" \
+                --root "$(CANONICAL_UNIT)" \
                 --repository "$(Build.Repository.Name)" \
                 --commit "$(Build.SourceVersion)" \
                 --environment "${{ parameters.environment }}" \
-                --unit "$(TF_ROOT)" \
-                --out "$(TF_ROOT)/plan-manifest.json"
+                --unit "$(CANONICAL_UNIT)" \
+                --out "$(CANONICAL_UNIT)/plan-manifest.json"
             displayName: Conformance gate (fails here, before any approval)
           - script: |
               set -euo pipefail
               python scripts/pipeline.py bundle \
-                --root "$(TF_ROOT)" \
+                --root "$(CANONICAL_UNIT)" \
                 --out "$(Build.ArtifactStagingDirectory)/bundle"
             displayName: Stage the sensitive artifact bundle (only the required files)
           - publish: $(Build.ArtifactStagingDirectory)/bundle
@@ -78,6 +86,8 @@ stages:
           applyAttempted: 'false'
           applyResult: not_attempted
           applyExitCode: '-1'
+          CANONICAL_UNIT: ''                      # set by preflight; default keeps the always() receipt populated
+          ACTUAL_COMMIT: $(Build.SourceVersion)   # replaced by the real HEAD in preflight
         strategy:
           runOnce:
             deploy:
@@ -87,22 +97,33 @@ stages:
                   artifact: plan-${{ parameters.environment }}
                 - bash: |
                     set +e
-                    R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
+                    # Canonicalize the unit and pin the actual commit BEFORE any Terraform.
+                    CANON="$(python scripts/pipeline.py canonical-unit --unit "$(TF_ROOT)")"
+                    if [ $? -ne 0 ]; then
+                      echo "##vso[task.logissue type=error]invalid deployable unit: $(TF_ROOT)"
+                      echo "##vso[task.setvariable variable=verifyResult]failed"; exit 1
+                    fi
+                    echo "##vso[task.setvariable variable=CANONICAL_UNIT]$CANON"
                     ACTUAL=$(git rev-parse HEAD)      # the commit actually checked out, not just the requested one
+                    echo "##vso[task.setvariable variable=ACTUAL_COMMIT]$ACTUAL"
                     if [ "$ACTUAL" != "$(Build.SourceVersion)" ]; then
                       echo "##vso[task.logissue type=error]checked-out $ACTUAL != requested $(Build.SourceVersion)"
                       echo "##vso[task.setvariable variable=verifyResult]failed"; exit 1
                     fi
+                  displayName: Preflight — canonicalize the unit and check the actual commit (before any Terraform)
+                - bash: |
+                    set +e
+                    R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
                     python scripts/pipeline.py verify \
                       --root "$R" --manifest "$R/plan-manifest.json" \
                       --repository "$(Build.Repository.Name)" \
-                      --commit "$ACTUAL" \
+                      --commit "$(ACTUAL_COMMIT)" \
                       --environment "${{ parameters.environment }}" \
-                      --unit "$(TF_ROOT)"
+                      --unit "$(CANONICAL_UNIT)"
                     RC=$?
                     [ $RC -eq 0 ] && echo "##vso[task.setvariable variable=verifyResult]success" || echo "##vso[task.setvariable variable=verifyResult]failed"
                     exit $RC          # fail the job on drift; the variable is already set for the receipt
-                  displayName: Verify verdict inputs (fail closed; checks the actual checked-out commit and the manifest)
+                  displayName: Verify verdict inputs (fail closed; git-anchored descriptor/profile, hashes, exemptions)
                 - task: AzureCLI@2
                   displayName: terraform apply tfplan (exact saved plan; lockfile readonly; no re-plan)
                   condition: succeeded()
@@ -113,8 +134,8 @@ stages:
                     inlineScript: |
                       set +e
                       R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
-                      cp "$R/tfplan" "$(TF_ROOT)/tfplan"      # the verified saved plan, into the checked-out root
-                      cd "$(TF_ROOT)"
+                      cp "$R/tfplan" "$(CANONICAL_UNIT)/tfplan"      # the verified saved plan, into the checked-out unit
+                      cd "$(CANONICAL_UNIT)"
                       terraform init -lockfile=readonly        # provider selection cannot silently change
                       terraform apply tfplan
                       RC=$?
@@ -126,6 +147,7 @@ stages:
                     set -euo pipefail
                     R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
                     # APPROVER is org-wired from the Environment approval — see pipelines/README.md "Security limitations".
+                    # Runtime identity is passed explicitly so a receipt is still emitted if the manifest is unreadable.
                     python scripts/pipeline.py receipt \
                       --manifest "$R/plan-manifest.json" \
                       --approver "$(APPROVER)" \
@@ -135,6 +157,10 @@ stages:
                       --apply-exit-code "$(applyExitCode)" \
                       --pipeline-result "$(Agent.JobStatus)" \
                       --completed-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                      --repository "$(Build.Repository.Name)" \
+                      --commit "$(ACTUAL_COMMIT)" \
+                      --environment "${{ parameters.environment }}" \
+                      --unit "$(CANONICAL_UNIT)" \
                       --out "$R/deployment-receipt.json"
                   displayName: Deployment receipt (every handled verify/apply outcome once checkout + bundle are available)
                   condition: always()
