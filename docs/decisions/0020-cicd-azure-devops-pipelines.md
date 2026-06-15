@@ -83,8 +83,8 @@ The controls are load-bearing; the platform under them is not. Porting to anothe
 - [AP-004](../anti-patterns.md#ap-004--configuration-drift) — the scheduled drift pipeline.
 - [AP-006](../anti-patterns.md#ap-006--secret-rotation-toil) — OIDC federation, no static secrets in the deploy identity.
 - [ADR 0007](./0007-change-as-code.md) — the change-as-code controls this architecture carries.
-- [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) — a failed conformance rule blocks the merge unless a recorded exemption covers it.
-- [ADR 0025](./0025-deployment-conformance-and-platform-baseline.md) — the PR plan is the conformance-evaluation input; apply consumes that exact, proven plan.
+- [ADR 0008](./0008-audit-before-deny-policy-lifecycle.md) — a conformance rule failing without a recorded exemption stops the deployment run before approval.
+- [ADR 0025](./0025-deployment-conformance-and-platform-baseline.md) — the PR plan is early feedback; the authoritative conformance gate runs per environment on that environment's own deployment plan, and apply consumes the exact saved plan that was gated and approved.
 - [ADR 0009](./0009-secrets-ephemeral-by-default.md) — OIDC federation, no static secrets.
 - [ADR 0013](./0013-platform-metrics-and-dora.md) — the deployment ledger is the DORA signal source.
 - [ADR 0017](./0017-terraform-state-and-backend.md) — the pipeline identity accesses state and runs the drift job.
