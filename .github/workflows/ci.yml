@@ -81,6 +81,15 @@ jobs:
             git diff -- policies/ncua-glba/CONTROL-MAP.md
             exit 1
           fi
+      - name: Regenerate implementation-status report
+        run: python scripts/generate-implementation-status.py
+      - name: Verify implementation status matches source
+        run: |
+          if ! git diff --quiet -- docs/IMPLEMENTATION-STATUS.md; then
+            echo "::error::IMPLEMENTATION-STATUS.md drift. Run scripts/generate-implementation-status.py locally and commit the result."
+            git diff -- docs/IMPLEMENTATION-STATUS.md
+            exit 1
+          fi
 
   module:
     name: module — ${{ matrix.module }}
