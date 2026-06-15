@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vitruvius.io/schemas/conformance-descriptor/v1.json",
+  "title": "Conformance Descriptor",
+  "description": "The TerraformRoot descriptor a deployable root declares (ADR 0025). A root states what kind of deployment it is; the named profile's rules are checked against its rendered plan before merge.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "additionalProperties": false,
+  "properties": {
+    "apiVersion": { "const": "vitruvius.io/v1" },
+    "kind": { "const": "TerraformRoot" },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "owner"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "owner": { "type": "string", "minLength": 1 }
+      }
+    },
+    "spec": {
+      "type": "object",
+      "required": ["scope", "profile"],
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "description": "Where this root binds, by ADR 0024 role vocabulary.",
+          "enum": [
+            "platform_management_group",
+            "landing_zone_management_group",
+            "environment_subscription",
+            "workload_resource_group"
+          ]
+        },
+        "profile": {
+          "description": "The conformance profile this deployment must satisfy, as name/version.",
+          "type": "string",
+          "pattern": "^[a-z0-9-]+/v[0-9]+$"
+        },
+        "business-criticality": { "type": "string" },
+        "data-classification": { "type": "string" },
+        "reliability": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "availability_slo": { "type": "string" },
+            "rto": { "type": "string" },
+            "rpo": { "type": "string" }
+          }
+        },
+        "exceptions": {
+          "description": "Each entry waives one profile rule and references an ADR 0008 exemption record.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["rule", "exemption"],
+            "additionalProperties": false,
+            "properties": {
+              "rule": { "type": "string", "minLength": 1 },
+              "exemption": { "type": "string", "minLength": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}

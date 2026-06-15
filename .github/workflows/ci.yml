@@ -90,6 +90,8 @@ jobs:
             git diff -- docs/IMPLEMENTATION-STATUS.md
             exit 1
           fi
+      - name: Conformance gate self-test (ADR 0025)
+        run: python scripts/evaluate-conformance.py --self-test
 
   module:
     name: module — ${{ matrix.module }}

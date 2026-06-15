@@ -1,0 +1,38 @@
+apiVersion: vitruvius.io/v1
+kind: ConformanceProfile
+metadata:
+  name: regulated-workload
+  version: v1
+  description: Properties an internal, regulated workload (handling member NPI) must satisfy before its change merges (ADR 0025). Each rule cites the compliance control it supports (ADR 0021).
+
+spec:
+  rules:
+    - id: keyvault.no-public-access
+      description: Key Vaults must disable public network access.
+      resource_types: [azurerm_key_vault]
+      assert: { field: public_network_access_enabled, equals: false }
+      cites: [csf:PR.DS-5]
+
+    - id: appservice.no-public-access
+      description: App Services must disable public network access.
+      resource_types: [azurerm_linux_web_app, azurerm_windows_web_app]
+      assert: { field: public_network_access_enabled, equals: false }
+      cites: [csf:PR.DS-5]
+
+    - id: appservice.https-only
+      description: App Services must redirect all traffic to HTTPS.
+      resource_types: [azurerm_linux_web_app, azurerm_windows_web_app]
+      assert: { field: https_only, equals: true }
+      cites: [csf:PR.DS-2]
+
+    - id: storage.no-public-blob
+      description: Storage accounts must disable anonymous public blob access.
+      resource_types: [azurerm_storage_account]
+      assert: { field: allow_nested_items_to_be_public, equals: false }
+      cites: [csf:PR.DS-5]
+
+    - id: location.approved-regions
+      description: Resources must be deployed only in approved regions.
+      resource_types: ["*"]
+      assert: { field: location, in: [eastus, eastus2] }
+      cites: []

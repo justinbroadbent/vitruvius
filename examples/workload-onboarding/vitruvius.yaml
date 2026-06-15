@@ -1,0 +1,15 @@
+apiVersion: vitruvius.io/v1
+kind: TerraformRoot
+metadata:
+  name: paylink
+  owner: payments-team
+spec:
+  scope: workload_resource_group
+  profile: regulated-workload/v1
+  business-criticality: tier-1
+  data-classification: confidential
+  reliability:
+    availability_slo: "99.9"
+    rto: 4h
+    rpo: 15m
+  exceptions: []

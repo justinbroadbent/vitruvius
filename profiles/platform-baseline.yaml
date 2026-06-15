@@ -1,0 +1,20 @@
+apiVersion: vitruvius.io/v1
+kind: ConformanceProfile
+metadata:
+  name: platform-baseline
+  version: v1
+  description: Properties the platform foundation root must satisfy before its change merges (ADR 0025). Lighter than a workload profile — the platform root deploys shared infrastructure, not member-facing services.
+
+spec:
+  rules:
+    - id: location.approved-regions
+      description: Resources must be deployed only in approved regions.
+      resource_types: ["*"]
+      assert: { field: location, in: [eastus, eastus2] }
+      cites: []
+
+    - id: storage.no-public-blob
+      description: Storage accounts must disable anonymous public blob access.
+      resource_types: [azurerm_storage_account]
+      assert: { field: allow_nested_items_to_be_public, equals: false }
+      cites: [csf:PR.DS-5]
