@@ -221,7 +221,7 @@ Four layers sit behind this — two built, two decided-but-ahead:
 - **Baseline rule** — applies because of *where* the deployment lives (its management group). *Built* (`policy-baseline`, Azure Policy).
 - **Azure Policy at runtime** — continuously re-checks the deployed estate, on any path in. *Built.*
 - **Profile rule** — applies because of *what* the deployment declares itself to be. *Decided, not built* (ADR 0025).
-- **Plan-time evaluation** — blocks bad *intent* against the rendered plan, before apply. *Built and fixture-tested* (the evaluator, profiles, and the pipeline slice that gates a real plan, hash-binds it, and applies it exactly once); goes live once that pipeline runs in an Azure DevOps org against real Azure (ADR 0025, ADR 0020).
+- **Plan-time evaluation** — blocks bad *intent* against the rendered plan, before apply. *Built and fixture-tested* (the evaluator, profiles, and the pipeline slice that gates a real plan, hash-binds every verdict input, and applies the verified saved plan with no re-plan); goes live once that pipeline runs in an Azure DevOps org against real Azure (ADR 0025, ADR 0020).
 
 ## The pipeline is controls, not a brand
 
@@ -383,7 +383,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Control / control map.** A specific security or compliance requirement (e.g. from NIST CSF), and the document saying which rule enforces each. Generated, never hand-kept (ADR 0021).
 
-**Deployment ledger.** The intended automatic, tamper-evident record of every deployment — which change, which version, where, who approved — both audit record and metrics source (ADR 0020). Part of the deployment pipeline that is decided but not yet built.
+**Deployment ledger.** The intended durable, append-only record aggregating every deployment's receipt — which change, which version, where, who approved — both audit record and metrics source (ADR 0020). The per-deployment **receipt** is built and *integrity-checked* (hashes, not a signature); the durable ledger *service* that aggregates receipts is not yet built.
 
 **Diagnostic settings.** Azure's "send this resource's logs to a workspace" feature. The safety-net module ensures it's set across the resource types it supports.
 

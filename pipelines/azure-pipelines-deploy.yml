@@ -2,24 +2,24 @@
 #
 # The control logic lives in scripts/pipeline.py and scripts/evaluate-conformance.py
 # and is vendor-independent — only this orchestration is Azure DevOps. A different
-# CD vendor maps the same four steps (plan+gate -> publish -> approve -> verify+apply)
-# onto its own primitives.
+# CD vendor maps the same steps (plan -> gate -> bundle -> approve -> verify -> apply
+# -> receipt) onto its own primitives.
 #
 # This is the *reference design*. Running it needs an Azure DevOps org, an
 # OIDC/workload-identity service connection (no stored secret — ADR 0009), and an
 # Environment whose "Approvals and checks" require an approver who is not the author
-# (ADR 0007). This repo's own CI (GitHub Actions) does not execute it; CI exercises
-# scripts/pipeline.py --self-test against plan fixtures. See docs/IMPLEMENTATION-STATUS.md.
+# (ADR 0007). This repo's CI (GitHub Actions) does not execute it; CI runs
+# scripts/pipeline.py --self-test. See docs/IMPLEMENTATION-STATUS.md.
 #
-# Binding guarantee: within one run, plan -> gate -> approve -> verify -> apply all
-# refer to the SAME saved tfplan. There is no second plan after approval. A
+# Guarantee: one saved plan, one normal-path apply invocation, and no re-plan
+# between gate and apply. A Terraform plan is bound to one state + input set, so a
 # multi-environment estate runs this pipeline once per environment, each gating on
-# its own inputs (ADR 0020 — a Terraform plan is bound to one state + input set).
+# its own inputs. Verdict inputs are hashed at the gate and re-verified before apply.
 
 parameters:
-  - name: root          # the deployable unit: a directory with main.tf and vitruvius.yaml
+  - name: root          # the deployable unit: a repo path with main.tf and vitruvius.yaml
     type: string
-  - name: environment   # dev | staging | prod — an Azure DevOps Environment with a non-author approver
+  - name: environment   # dev | staging | prod — an Environment with a non-author approver
     type: string
 
 variables:
@@ -28,7 +28,7 @@ variables:
 
 stages:
   - stage: plan
-    displayName: Plan and conformance gate
+    displayName: Plan, gate, and bundle
     jobs:
       - job: plan_and_gate
         steps:
@@ -52,53 +52,86 @@ stages:
                 --repository "$(Build.Repository.Name)" \
                 --commit "$(Build.SourceVersion)" \
                 --environment "${{ parameters.environment }}" \
+                --unit "$(TF_ROOT)" \
                 --out "$(TF_ROOT)/plan-manifest.json"
             displayName: Conformance gate (fails here, before any approval)
-          - publish: $(TF_ROOT)
+          - script: |
+              set -euo pipefail
+              python scripts/pipeline.py bundle \
+                --root "$(TF_ROOT)" \
+                --out "$(Build.ArtifactStagingDirectory)/bundle"
+            displayName: Stage the sensitive artifact bundle (only the required files)
+          - publish: $(Build.ArtifactStagingDirectory)/bundle
             artifact: plan-${{ parameters.environment }}
-            # Immutable artifact: tfplan (binary), tfplan.json, vitruvius.yaml, plan-manifest.json
+            # Immutable: tfplan (binary), tfplan.json, vitruvius.yaml, plan-manifest.json.
+            # Both plans may contain sensitive values — see pipelines/README.md.
 
   - stage: apply
-    displayName: Approve and apply the exact plan
+    displayName: Approve, verify, apply, receipt
     dependsOn: plan
     jobs:
       - deployment: apply
-        # The Environment's required approver (not the author) gates this deployment job.
-        environment: ${{ parameters.environment }}
+        environment: ${{ parameters.environment }}   # non-author approver gates this job (ADR 0007)
+        variables:
+          verifyResult: failed        # defaults so the always() receipt has values even if a step is skipped
+          applyAttempted: 'false'
+          applyResult: not_attempted
+          applyExitCode: '-1'
         strategy:
           runOnce:
             deploy:
               steps:
+                - checkout: self        # deployment jobs do not check out by default; pipeline.py needs the evaluator/schema/profiles/registry
                 - download: current
                   artifact: plan-${{ parameters.environment }}
-                - script: |
-                    set -euo pipefail
+                - bash: |
+                    set +e
                     R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
-                    python scripts/pipeline.py verify --root "$R" --manifest "$R/plan-manifest.json"
-                  displayName: Verify artifact hashes (refuse on any drift)
+                    python scripts/pipeline.py verify \
+                      --root "$R" --manifest "$R/plan-manifest.json" \
+                      --repository "$(Build.Repository.Name)" \
+                      --commit "$(Build.SourceVersion)" \
+                      --environment "${{ parameters.environment }}" \
+                      --unit "$(TF_ROOT)"
+                    RC=$?
+                    [ $RC -eq 0 ] && echo "##vso[task.setvariable variable=verifyResult]success" || echo "##vso[task.setvariable variable=verifyResult]failed"
+                    exit $RC          # fail the job on drift; the variable is already set for the receipt
+                  displayName: Verify verdict inputs (fail closed; checks commit matches the manifest)
                 - task: AzureCLI@2
-                  displayName: terraform apply tfplan (the exact saved plan — no re-plan)
+                  displayName: terraform apply tfplan (exact saved plan; lockfile readonly; no re-plan)
+                  condition: succeeded()
                   inputs:
                     azureSubscription: $(SERVICE_CONNECTION)
                     scriptType: bash
                     scriptLocation: inlineScript
                     inlineScript: |
-                      set -euo pipefail
+                      set +e
                       R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
-                      cd "$R"
-                      terraform init
+                      cp "$R/tfplan" "$(TF_ROOT)/tfplan"      # the verified saved plan, into the checked-out root
+                      cd "$(TF_ROOT)"
+                      terraform init -lockfile=readonly        # provider selection cannot silently change
                       terraform apply tfplan
-                - script: |
+                      RC=$?
+                      echo "##vso[task.setvariable variable=applyAttempted]true"
+                      echo "##vso[task.setvariable variable=applyExitCode]$RC"
+                      [ $RC -eq 0 ] && echo "##vso[task.setvariable variable=applyResult]success" || echo "##vso[task.setvariable variable=applyResult]failed"
+                      exit $RC
+                - bash: |
                     set -euo pipefail
                     R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
-                    # APPROVER is sourced from the Environment approval record (org-wired);
-                    # see pipelines/README.md "Security limitations".
+                    # APPROVER is org-wired from the Environment approval — see pipelines/README.md "Security limitations".
                     python scripts/pipeline.py receipt \
                       --manifest "$R/plan-manifest.json" \
                       --approver "$(APPROVER)" \
-                      --apply-result success \
+                      --verify-result "$(verifyResult)" \
+                      --apply-attempted "$(applyAttempted)" \
+                      --apply-result "$(applyResult)" \
+                      --apply-exit-code "$(applyExitCode)" \
+                      --pipeline-result "$(Agent.JobStatus)" \
                       --applied-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
                       --out "$R/deployment-receipt.json"
-                  displayName: Deployment receipt
+                  displayName: Deployment receipt (every terminal outcome)
+                  condition: always()
                 - publish: $(Pipeline.Workspace)/plan-${{ parameters.environment }}/deployment-receipt.json
                   artifact: receipt-${{ parameters.environment }}
+                  condition: always()

@@ -1,49 +1,62 @@
 # pipelines/
 
-The reference ADR 0020 deployment pipeline — the thin vertical slice that connects the ADR 0025 conformance evaluator to a *real* Terraform plan and binds plan, conformance verdict, approval, and apply to one saved artifact.
+The reference ADR 0020 deployment pipeline — the thin vertical slice that connects the ADR 0025 conformance evaluator to a *real* Terraform plan and binds every input that influenced the verdict to one saved plan.
 
-The control logic is vendor-independent (`scripts/pipeline.py` + `scripts/evaluate-conformance.py`); `azure-pipelines-deploy.yml` is only the Azure DevOps orchestration, because ADR 0020 names Azure DevOps as the reference. Another vendor maps the same four steps onto its own primitives.
+The control logic is vendor-independent (`scripts/pipeline.py` + `scripts/evaluate-conformance.py`); `azure-pipelines-deploy.yml` is only the Azure DevOps orchestration, because ADR 0020 names Azure DevOps as the reference. Another vendor maps the same steps onto its own primitives.
 
-## Control flow: plan → apply
+## Control flow
 
 ```
-plan stage
-  terraform init
-  terraform plan -out=tfplan            # one saved binary plan
-  terraform show -json tfplan > tfplan.json
-  pipeline.py gate                       # validate vitruvius.yaml; evaluate the rendered plan;
-                                         #   on PASS write plan-manifest.json with the SHA-256 of
-                                         #   tfplan, tfplan.json, vitruvius.yaml, the resolved profile,
-                                         #   the evaluator, plus the source commit.
-                                         #   on FAIL: exit non-zero, write no manifest → stop here.
-  publish {tfplan, tfplan.json, vitruvius.yaml, plan-manifest.json}   # immutable artifact
+plan stage  (checkout)
+  terraform init ; terraform plan -out=tfplan ; terraform show -json tfplan > tfplan.json
+  pipeline.py gate     validate vitruvius.yaml vs the schema; evaluate the rendered plan.
+                       on PASS write plan-manifest.json: SHA-256 of every verdict input plus
+                       repository/commit/environment/unit, the gate timestamp, and the exemptions
+                       relied on (with expiry). on FAIL: exit non-zero, write no manifest -> stop.
+  pipeline.py bundle   stage ONLY {tfplan, tfplan.json, vitruvius.yaml, plan-manifest.json}
+  publish the bundle   immutable artifact (no .terraform/, no unrelated root files)
 
-── approval ──  Environment requires an approver who is not the author (ADR 0007)
+── approval ──  the Environment requires an approver who is not the author (ADR 0007)
 
-apply stage
-  download the artifact
-  pipeline.py verify                     # recompute every hash; refuse if any differs from the manifest
-  terraform apply tfplan                 # the exact saved plan — there is no second plan
-  pipeline.py receipt                     # emit deployment-receipt.json (commit, root, env, profile,
-                                         #   artifact hashes, approver, result, applied-at)
-  publish deployment-receipt.json
+apply stage  (checkout — the control files come from the repo at the gate's commit)
+  download the bundle
+  pipeline.py verify   FAIL CLOSED: reject an unsupported/missing manifest_version, missing or
+                       unexpected hash keys, missing required fields, a runtime identity
+                       (repository/commit/environment/unit) that differs from the manifest, any
+                       artifact whose hash changed, or a relied-upon exemption now expired.
+  terraform init -lockfile=readonly ; terraform apply tfplan   (the verified saved plan; no re-plan)
+  pipeline.py receipt  emitted for EVERY terminal outcome (always())
+  publish the receipt  (always())
 ```
 
-Hashes are computed **before** approval (gate) and verified again **before** apply (verify); the apply refuses if any artifact or hash differs. The plan that was gated and approved is the plan that applies.
+## What the manifest binds (the verdict inputs)
+
+Eight SHA-256 hashes — the plan and the everything that decided it: `tfplan` (binary), `tfplan.json`, `vitruvius.yaml`, the resolved **profile**, the **evaluator**, the **descriptor schema**, the **exemption registry**, and this **controller** (`pipeline.py`). The exemption registry is bound even though apply does not re-evaluate, because it shaped the original verdict; the manifest also records which exemptions were *relied on* and their expiry, and apply refuses if one has since expired. `verify` re-checks the runtime identity (repository, commit, environment, deployable unit) against the manifest, not merely copies it forward.
+
+## The guarantee — stated precisely
+
+This is **not** "exactly once." It is: **one saved plan, one normal-path apply invocation, and no re-plan between gate and apply.** Within one pipeline run, the plan that was gated and approved is the plan that applies (`terraform apply tfplan` of the verified binary, `init -lockfile=readonly` so provider selection cannot drift). Idempotency under retries/cancellation is Terraform's and the operator's concern, not a claim of this slice.
 
 ## How this reconciles ADR 0020
 
-ADR 0020 as first written said conformance is a pre-merge PR check, that apply consumes "the exact plan reviewed," and that "the same built artifact promotes through every environment." For Terraform those can't all hold: a saved plan is bound to one backend/state + input set, so a PR-time plan is not the binary plan applied to each environment when environments differ by input. The authoritative, hash-bound gate therefore runs **inside one environment's pipeline run**, on that environment's own plan. A pre-merge PR check is a useful early signal but is not the hash-bound gate. ADR 0020 has been corrected to say so.
+A pre-merge PR plan is **early feedback**. The **deployment plan** is the authoritative, environment-bound, hash-bound gate. The receipt and artifact bundle are **integrity-checked, not signed provenance**. A Terraform plan is bound to one state + input set, so each environment plans, gates, and applies its own plan.
 
-## What is built vs planned
+## Artifact handling (sensitive)
 
-Built (and self-tested in CI, `pipeline.py --self-test`): the gate/verify/receipt control logic, artifact hashing, tamper detection, exact-plan selection, and the reference YAML.
+Both `tfplan` (binary) and `tfplan.json` can contain sensitive values (resource attributes, computed config, occasionally inlined secrets from variables or data). The published bundle therefore requires:
 
-Not built: live execution (needs an Azure DevOps org, an OIDC service connection, and real Azure); the **durable, append-only, queryable ledger service** of ADR 0020 §3 (the receipt is one record, not the service); scheduled drift detection; break-glass reconciliation; and multi-environment promotion orchestration.
+- **Access** — restricted to the pipeline's service identity and the named approvers; not world/org-readable.
+- **Encryption** — at rest (the artifact store) and in transit (TLS); the default for Azure DevOps Pipeline Artifacts, to be confirmed by the adopter.
+- **Retention** — short, just long enough to cover the approval window plus audit (e.g., 30 days), then auto-expire.
+- **Deletion** — bundles expire on the retention policy; do not pin plan artifacts indefinitely. The durable record is the receipt, not the plan.
 
 ## Security limitations of the reference implementation
 
-- **No live execution here.** CI has no Azure credentials, so the slice is proven against committed plan fixtures, not a live apply.
-- **Approver identity.** Azure DevOps does not expose the approving identity as a first-class pipeline variable; the receipt's `approver` is sourced from an org-wired `$(APPROVER)` (or the Environment approval API). Until that is wired, the receipt's approver field is only as trustworthy as that wiring.
-- **Hashes are integrity, not provenance.** SHA-256 over the artifacts detects tampering between gate and apply within a run; it is not a signature. Signed artifacts / provenance (e.g., a signed manifest) are a future hardening.
-- **Trust boundary.** The gate trusts the plan JSON Terraform produced; it does not independently re-derive resource intent. The managed-resource boundary and fail-closed assertions (ADR 0025) bound this, but a compromised plan-producing agent is out of scope for this slice.
+- **No live execution here.** CI has no Azure credentials, so the slice is proven against committed fixtures, not a live apply.
+- **Integrity, not provenance.** SHA-256 over the verdict inputs detects tampering between gate and apply; it is not a signature, and the manifest travels in the same bundle it attests. Signed artifacts / an out-of-band anchor are a future hardening, deliberately out of this slice.
+- **Approver identity.** Azure DevOps does not expose the approving identity as a first-class pipeline variable; the receipt's `approver` is sourced from an org-wired `$(APPROVER)` (or the Environment approval API) — only as trustworthy as that wiring.
+- **Trust boundary.** The gate trusts the plan JSON Terraform produced; a compromised plan-producing agent is out of scope (the managed-only, fail-closed evaluation bounds but does not eliminate this).
+
+## Fixtures
+
+`scripts/conformance/fixtures/plan.real-shape.json` is a **representative Terraform-plan-shape fixture** — hand-authored, structurally faithful to `terraform show -json` (nested `child_modules`, `mode`, `resource_changes`), used as a compatibility check. It is **not** a Terraform-generated plan; producing one needs Azure credentials and a provider download unavailable in this environment. The other fixtures are synthetic edge cases.

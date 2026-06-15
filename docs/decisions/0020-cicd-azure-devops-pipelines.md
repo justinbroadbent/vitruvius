@@ -20,7 +20,7 @@ The architecture is platform-agnostic. The reference implementation is Azure Dev
 
 ## Decision
 
-### 1. Plan is a pull-request check; apply is gated, approved, and promoted per environment
+### 1. The PR plan is early feedback; the authoritative gate is the per-environment deployment plan
 
 - `plan` — Terraform's dry run, which shows what would change without changing anything — runs as a PR check. No apply runs on a PR.
 - The plan is the input to the **conformance check** ([ADR 0025](./0025-deployment-conformance-and-platform-baseline.md)): the deployment's declared profile is evaluated against the rendered plan. A pre-merge PR run is a useful early signal, but the **authoritative, hash-bound gate runs in the deployment pipeline, per environment, on that environment's own plan, immediately before its approval** — because a Terraform plan is bound to one state and input set, only the pipeline's plan is the plan that applies. A rule failing without a recorded exemption ([ADR 0008](./0008-audit-before-deny-policy-lifecycle.md)) stops the run before approval. The reference slice that does this is [`pipelines/`](../../pipelines/).
@@ -48,7 +48,7 @@ State and many other resources are network-private ([ADR 0017](./0017-terraform-
 
 PR validation runs `fmt` / `validate` / `terraform test`, plus manifest validation: each `manifest.yaml` is validated against `schemas/module-manifest.schema.json` and checked for parity with the module's `variables.tf` / `outputs.tf` ([ADR 0011](./0011-module-manifest.md)).
 
-> **In plain terms:** the pipeline never holds a password, it shows its work on every proposed change (the plan) and checks that plan is compliant before it can merge, it needs a second person's sign-off to touch production, and it writes its own tamper-evident receipt for every deployment.
+> **In plain terms:** the pipeline never holds a password; it shows its work on every proposed change (the plan), with a fast conformance check on the PR for early feedback and the authoritative, hash-bound check in the deployment pipeline on each environment's own plan; it needs a second person's sign-off to touch production; and it writes an integrity-checked receipt for every deployment outcome.
 
 ## What this does not decide
 
