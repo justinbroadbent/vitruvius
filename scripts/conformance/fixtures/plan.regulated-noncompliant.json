@@ -9,18 +9,19 @@
           "type": "azurerm_storage_account",
           "name": "data",
           "values": { "name": "stpaylinkprod", "location": "westus", "allow_nested_items_to_be_public": true }
+        },
+        {
+          "address": "azuread_application_password.legacy",
+          "type": "azuread_application_password",
+          "name": "legacy",
+          "values": { "display_name": "legacy-client-secret" }
         }
       ],
       "child_modules": [
         {
           "address": "module.web_api",
           "resources": [
-            {
-              "address": "module.web_api.azurerm_key_vault.this",
-              "type": "azurerm_key_vault",
-              "name": "this",
-              "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": true }
-            }
+            { "address": "module.web_api.azurerm_key_vault.this", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": true } }
           ]
         }
       ]

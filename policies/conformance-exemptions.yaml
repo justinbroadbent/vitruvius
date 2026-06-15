@@ -1,0 +1,20 @@
+# Conformance-gate exemption registry (ADR 0025 §4 / ADR 0008). A descriptor's
+# `exceptions` entry waives a profile rule only when it references an exemption
+# here that exists, is owned, is unexpired, and covers that exact rule — and the
+# rule actually failed. The plan-policy evaluator (scripts/evaluate-conformance.py)
+# enforces all of that; a missing, expired, unowned, wrong-rule, or unused
+# exemption waives nothing and is itself a finding.
+#
+# This is the reference stand-in for the ADR 0008 exemption store. In a live
+# estate the source of truth is Azure Policy exemptions, with native expiry.
+#
+# Shape (when populated):
+#   exemptions:
+#     EX-0142:
+#       rule: networking.no-public-data-plane   # the one rule this waives
+#       owner: payments-team                     # a team, never a person (ADR 0008)
+#       expires: 2026-12-31                      # ISO date; past = expired
+#       justification: "..."                     # why, in one line
+#       adr: ADR-0142                            # the deviation ADR or ticket
+
+exemptions: {}

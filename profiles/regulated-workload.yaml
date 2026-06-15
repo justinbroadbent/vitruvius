@@ -3,36 +3,64 @@ kind: ConformanceProfile
 metadata:
   name: regulated-workload
   version: v1
-  description: Properties an internal, regulated workload (handling member NPI) must satisfy before its change merges (ADR 0025). Each rule cites the compliance control it supports (ADR 0021).
+  description: What an internal, regulated workload (handling member NPI) must satisfy before its change merges (ADR 0025) — both completeness (required capabilities present, forbidden ones absent) and correctness (safe properties on what is present). Each rule cites the compliance control it supports (ADR 0021).
 
+# Rule kinds:
+#   require_resource  — at least `minimum` of these types must be planned (completeness).
+#   forbid_resource   — none of these types may be planned.
+#   assert_property   — present resources of these types must satisfy the property;
+#                       a missing/unknown value FAILS CLOSED unless on_missing: skip.
+# require_resource names only what this root must create itself; a capability the
+# workload consumes from another root is out of a single plan's view (ADR 0025).
 spec:
   rules:
+    - id: identity.workload-federation-required
+      kind: require_resource
+      resource_types: [azurerm_federated_identity_credential]
+      minimum: 1
+      cites: [csf:PR.AC-1]
+
+    - id: identity.no-static-secret
+      kind: forbid_resource
+      resource_types: [azuread_application_password, azuread_service_principal_password]
+      cites: [csf:PR.AC-1]
+
     - id: keyvault.no-public-access
-      description: Key Vaults must disable public network access.
+      kind: assert_property
       resource_types: [azurerm_key_vault]
-      assert: { field: public_network_access_enabled, equals: false }
+      field: public_network_access_enabled
+      equals: false
+      on_missing: fail
       cites: [csf:PR.DS-5]
 
     - id: appservice.no-public-access
-      description: App Services must disable public network access.
+      kind: assert_property
       resource_types: [azurerm_linux_web_app, azurerm_windows_web_app]
-      assert: { field: public_network_access_enabled, equals: false }
+      field: public_network_access_enabled
+      equals: false
+      on_missing: fail
       cites: [csf:PR.DS-5]
 
     - id: appservice.https-only
-      description: App Services must redirect all traffic to HTTPS.
+      kind: assert_property
       resource_types: [azurerm_linux_web_app, azurerm_windows_web_app]
-      assert: { field: https_only, equals: true }
+      field: https_only
+      equals: true
+      on_missing: fail
       cites: [csf:PR.DS-2]
 
     - id: storage.no-public-blob
-      description: Storage accounts must disable anonymous public blob access.
+      kind: assert_property
       resource_types: [azurerm_storage_account]
-      assert: { field: allow_nested_items_to_be_public, equals: false }
+      field: allow_nested_items_to_be_public
+      equals: false
+      on_missing: fail
       cites: [csf:PR.DS-5]
 
     - id: location.approved-regions
-      description: Resources must be deployed only in approved regions.
+      kind: assert_property
       resource_types: ["*"]
-      assert: { field: location, in: [eastus, eastus2] }
+      field: location
+      in: [eastus, eastus2]
+      on_missing: skip
       cites: []

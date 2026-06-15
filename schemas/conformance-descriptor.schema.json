@@ -20,7 +20,7 @@
     },
     "spec": {
       "type": "object",
-      "required": ["scope", "profile"],
+      "required": ["scope", "profile", "business-criticality", "data-classification"],
       "additionalProperties": false,
       "properties": {
         "scope": {

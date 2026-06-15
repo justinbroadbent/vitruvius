@@ -3,18 +3,23 @@ kind: ConformanceProfile
 metadata:
   name: platform-baseline
   version: v1
-  description: Properties the platform foundation root must satisfy before its change merges (ADR 0025). Lighter than a workload profile — the platform root deploys shared infrastructure, not member-facing services.
+  description: What the platform foundation root must satisfy before its change merges (ADR 0025). Lighter than a workload profile — the platform root deploys shared infrastructure, not member-facing services. Completeness rules for the platform layer (e.g., the diagnostic-settings initiative must be present) are a follow-up.
 
+# Rule kinds: see profiles/regulated-workload.yaml.
 spec:
   rules:
-    - id: location.approved-regions
-      description: Resources must be deployed only in approved regions.
-      resource_types: ["*"]
-      assert: { field: location, in: [eastus, eastus2] }
-      cites: []
-
     - id: storage.no-public-blob
-      description: Storage accounts must disable anonymous public blob access.
+      kind: assert_property
       resource_types: [azurerm_storage_account]
-      assert: { field: allow_nested_items_to_be_public, equals: false }
+      field: allow_nested_items_to_be_public
+      equals: false
+      on_missing: fail
       cites: [csf:PR.DS-5]
+
+    - id: location.approved-regions
+      kind: assert_property
+      resource_types: ["*"]
+      field: location
+      in: [eastus, eastus2]
+      on_missing: skip
+      cites: []

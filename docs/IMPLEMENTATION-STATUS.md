@@ -51,8 +51,8 @@ Where each accepted decision stands today — **decided** (written down), **impl
   - Built: The control-mapping contract<br>mappings.yaml<br>the generated control map<br>the drift gate<br>and exemplar control families.
   - Planned: The full control catalog and the evidence pack. _(tracking: #13)_
 - **[ADR 0025](decisions/0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned**
-  - Built: foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.<br>The conformance descriptor schema<br>the platform-baseline and regulated-workload profiles<br>and the plan-policy evaluator — proven in CI against plan fixtures (compliant passes<br>non-compliant fails<br>exemptions waive).
-  - Planned: Feeding a real rendered plan into the gate on every pull request — the deployment pipeline's job. _(tracking: #5)_
+  - Built: foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.<br>The conformance gate — descriptor schema<br>profiles<br>and evaluator — checks completeness (required capabilities present<br>forbidden ones absent)<br>correctness (properties fail closed on missing values)<br>and exemption lifecycle (owned<br>unexpired<br>rule-matched); all exercised in CI against plan fixtures.
+  - Planned: Feeding a real rendered plan into the gate on every PR (the deployment pipeline's job).<br>The descriptor driving classification/reliability tag-match rules (ADR 0025 section 5).<br>Relationship rules (e.g. diagnostics-per-resource) and the cross-root provides/requires capability graph. _(tracking: #5)_
 
 ## Decided, not yet built (5)
 
