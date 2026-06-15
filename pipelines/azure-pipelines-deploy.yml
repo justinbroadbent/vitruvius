@@ -1,0 +1,104 @@
+# Reference ADR 0020 deployment pipeline (Azure DevOps).
+#
+# The control logic lives in scripts/pipeline.py and scripts/evaluate-conformance.py
+# and is vendor-independent — only this orchestration is Azure DevOps. A different
+# CD vendor maps the same four steps (plan+gate -> publish -> approve -> verify+apply)
+# onto its own primitives.
+#
+# This is the *reference design*. Running it needs an Azure DevOps org, an
+# OIDC/workload-identity service connection (no stored secret — ADR 0009), and an
+# Environment whose "Approvals and checks" require an approver who is not the author
+# (ADR 0007). This repo's own CI (GitHub Actions) does not execute it; CI exercises
+# scripts/pipeline.py --self-test against plan fixtures. See docs/IMPLEMENTATION-STATUS.md.
+#
+# Binding guarantee: within one run, plan -> gate -> approve -> verify -> apply all
+# refer to the SAME saved tfplan. There is no second plan after approval. A
+# multi-environment estate runs this pipeline once per environment, each gating on
+# its own inputs (ADR 0020 — a Terraform plan is bound to one state + input set).
+
+parameters:
+  - name: root          # the deployable unit: a directory with main.tf and vitruvius.yaml
+    type: string
+  - name: environment   # dev | staging | prod — an Azure DevOps Environment with a non-author approver
+    type: string
+
+variables:
+  TF_ROOT: ${{ parameters.root }}
+  SERVICE_CONNECTION: vitruvius-oidc   # workload-identity federation; no stored credential
+
+stages:
+  - stage: plan
+    displayName: Plan and conformance gate
+    jobs:
+      - job: plan_and_gate
+        steps:
+          - checkout: self
+          - task: AzureCLI@2
+            displayName: terraform plan -out=tfplan ; show -json
+            inputs:
+              azureSubscription: $(SERVICE_CONNECTION)
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                set -euo pipefail
+                cd "$(TF_ROOT)"
+                terraform init
+                terraform plan -out=tfplan
+                terraform show -json tfplan > tfplan.json
+          - script: |
+              set -euo pipefail
+              python scripts/pipeline.py gate \
+                --root "$(TF_ROOT)" \
+                --repository "$(Build.Repository.Name)" \
+                --commit "$(Build.SourceVersion)" \
+                --environment "${{ parameters.environment }}" \
+                --out "$(TF_ROOT)/plan-manifest.json"
+            displayName: Conformance gate (fails here, before any approval)
+          - publish: $(TF_ROOT)
+            artifact: plan-${{ parameters.environment }}
+            # Immutable artifact: tfplan (binary), tfplan.json, vitruvius.yaml, plan-manifest.json
+
+  - stage: apply
+    displayName: Approve and apply the exact plan
+    dependsOn: plan
+    jobs:
+      - deployment: apply
+        # The Environment's required approver (not the author) gates this deployment job.
+        environment: ${{ parameters.environment }}
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: plan-${{ parameters.environment }}
+                - script: |
+                    set -euo pipefail
+                    R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
+                    python scripts/pipeline.py verify --root "$R" --manifest "$R/plan-manifest.json"
+                  displayName: Verify artifact hashes (refuse on any drift)
+                - task: AzureCLI@2
+                  displayName: terraform apply tfplan (the exact saved plan — no re-plan)
+                  inputs:
+                    azureSubscription: $(SERVICE_CONNECTION)
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      set -euo pipefail
+                      R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
+                      cd "$R"
+                      terraform init
+                      terraform apply tfplan
+                - script: |
+                    set -euo pipefail
+                    R="$(Pipeline.Workspace)/plan-${{ parameters.environment }}"
+                    # APPROVER is sourced from the Environment approval record (org-wired);
+                    # see pipelines/README.md "Security limitations".
+                    python scripts/pipeline.py receipt \
+                      --manifest "$R/plan-manifest.json" \
+                      --approver "$(APPROVER)" \
+                      --apply-result success \
+                      --applied-at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+                      --out "$R/deployment-receipt.json"
+                  displayName: Deployment receipt
+                - publish: $(Pipeline.Workspace)/plan-${{ parameters.environment }}/deployment-receipt.json
+                  artifact: receipt-${{ parameters.environment }}

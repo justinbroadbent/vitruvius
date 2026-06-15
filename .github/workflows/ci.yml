@@ -94,6 +94,8 @@ jobs:
           fi
       - name: Conformance gate self-test (ADR 0025)
         run: python scripts/evaluate-conformance.py --self-test
+      - name: Deployment-pipeline slice self-test (ADR 0020)
+        run: python scripts/pipeline.py --self-test
 
   module:
     name: module — ${{ matrix.module }}

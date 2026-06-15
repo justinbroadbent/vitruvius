@@ -1,0 +1,80 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "azurerm_resource_group.workload",
+          "mode": "managed",
+          "type": "azurerm_resource_group",
+          "name": "workload",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "rg-paylink-prod",
+            "location": "eastus",
+            "tags": { "owner": "payments-team", "env": "prod", "cost-center": "cc-3003", "data-classification": "confidential", "business-criticality": "tier-1" }
+          }
+        },
+        {
+          "address": "azurerm_storage_account.data",
+          "mode": "managed",
+          "type": "azurerm_storage_account",
+          "name": "data",
+          "provider_name": "registry.terraform.io/hashicorp/azurerm",
+          "values": {
+            "name": "stpaylinkprod01",
+            "location": "eastus2",
+            "allow_nested_items_to_be_public": false,
+            "tags": { "data-classification": "confidential", "business-criticality": "tier-1" }
+          }
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.web_api",
+          "resources": [
+            {
+              "address": "module.web_api.azurerm_user_assigned_identity.this",
+              "mode": "managed",
+              "type": "azurerm_user_assigned_identity",
+              "name": "this",
+              "provider_name": "registry.terraform.io/hashicorp/azurerm",
+              "values": { "name": "id-paylink-prod", "location": "eastus" }
+            },
+            {
+              "address": "module.web_api.azurerm_federated_identity_credential.this",
+              "mode": "managed",
+              "type": "azurerm_federated_identity_credential",
+              "name": "this",
+              "provider_name": "registry.terraform.io/hashicorp/azurerm",
+              "values": { "name": "fic-paylink-prod" }
+            }
+          ],
+          "child_modules": [
+            {
+              "address": "module.web_api.module.key_vault",
+              "resources": [
+                {
+                  "address": "module.web_api.module.key_vault.azurerm_key_vault.this",
+                  "mode": "managed",
+                  "type": "azurerm_key_vault",
+                  "name": "this",
+                  "provider_name": "registry.terraform.io/hashicorp/azurerm",
+                  "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": false, "sku_name": "standard" }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    { "address": "azurerm_resource_group.workload", "mode": "managed", "type": "azurerm_resource_group", "name": "workload", "change": { "actions": ["create"], "before": null, "after": { "name": "rg-paylink-prod", "location": "eastus" } } },
+    { "address": "azurerm_storage_account.data", "mode": "managed", "type": "azurerm_storage_account", "name": "data", "change": { "actions": ["create"], "before": null, "after": { "name": "stpaylinkprod01", "location": "eastus2", "allow_nested_items_to_be_public": false } } },
+    { "address": "module.web_api.azurerm_user_assigned_identity.this", "mode": "managed", "type": "azurerm_user_assigned_identity", "name": "this", "change": { "actions": ["create"], "before": null, "after": { "name": "id-paylink-prod", "location": "eastus" } } },
+    { "address": "module.web_api.azurerm_federated_identity_credential.this", "mode": "managed", "type": "azurerm_federated_identity_credential", "name": "this", "change": { "actions": ["create"], "before": null, "after": { "name": "fic-paylink-prod" } } },
+    { "address": "module.web_api.module.key_vault.azurerm_key_vault.this", "mode": "managed", "type": "azurerm_key_vault", "name": "this", "change": { "actions": ["create"], "before": null, "after": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": false } } }
+  ]
+}
