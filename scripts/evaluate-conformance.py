@@ -38,7 +38,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 try:
@@ -193,9 +193,12 @@ def validate_descriptor(path: Path, schema: dict) -> dict:
 
 
 def _descriptor(profile: str, exceptions: list | None = None) -> dict:
+    # Includes the now-required classification fields so test descriptors are valid.
     return {"apiVersion": "vitruvius.io/v1", "kind": "TerraformRoot",
             "metadata": {"name": "self-test", "owner": "self-test"},
-            "spec": {"scope": "workload_resource_group", "profile": profile, "exceptions": exceptions or []}}
+            "spec": {"scope": "workload_resource_group", "profile": profile,
+                     "business-criticality": "tier-1", "data-classification": "confidential",
+                     "exceptions": exceptions or []}}
 
 
 def self_test() -> list[str]:
@@ -233,7 +236,8 @@ def self_test() -> list[str]:
         problems.append(f"null-property fixture should fail closed on keyvault.no-public-access; got {[k['rule'] for k in kept]}")
 
     # 5. Exemption lifecycle: a valid exemption waives; fake / expired / wrong-rule do not.
-    future, past = date.today().replace(year=date.today().year + 1).isoformat(), date.today().replace(year=date.today().year - 1).isoformat()
+    # timedelta, not .replace(year=...), so the test is safe on Feb 29.
+    future, past = (date.today() + timedelta(days=365)).isoformat(), (date.today() - timedelta(days=365)).isoformat()
     registry = {
         "EX-VALID": {"rule": "keyvault.no-public-access", "owner": "payments-team", "expires": future, "justification": "test"},
         "EX-EXPIRED": {"rule": "keyvault.no-public-access", "owner": "payments-team", "expires": past, "justification": "test"},
