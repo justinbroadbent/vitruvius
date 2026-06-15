@@ -60,6 +60,12 @@ The initiative is assigned at a management group so one assignment covers every 
 
 The guardrails ship as custom policy definitions (JSON in `policy/`) rather than references to Azure built-ins. This keeps the module self-contained and reviewable in one place — the rule, its effect parameter, and its compliance intent live together. An adopter who prefers Microsoft's built-ins can swap the definition bodies without changing the module's contract.
 
+## What the tests prove — and what they don't
+
+The `terraform test` suite runs against a mocked provider with no Azure account, so it proves **configuration invariants**: the definitions and initiative are assembled, the four guardrails are bundled, the parameters and effect flow through, the default is Audit-before-Deny (`enforce = false`), and the no-op / definitions-only / assigned modes behave. It does **not** prove that Azure Policy will evaluate a real resource as intended, or actually deny a non-compliant deployment — a mocked plan cannot execute policy evaluation.
+
+Proving enforcement is a real-estate step, and it is the [ADR 0008](../../../docs/decisions/0008-audit-before-deny-policy-lifecycle.md) lifecycle rather than a testing gap: assign the initiative in **Audit** at the intended scope, create representative compliant and non-compliant resources, inspect the evaluation results, analyse false positives, and only then promote to **Deny**. The mocked tests guard the module's wiring; the Audit period guards the rule's behaviour.
+
 ## Cites
 
 - Implements [ADR 0025](../../../docs/decisions/0025-deployment-conformance-and-platform-baseline.md) §1 — mandatory estate controls are platform-owned and assigned at a management group.

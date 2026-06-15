@@ -112,7 +112,7 @@ vitruvius/
 
 ## The eight modules
 
-Every module ships the same way: a **manifest** (`manifest.yaml`, its machine-readable spec sheet), a README, agent guidance, Terraform code pinned to exact versions of the **Azure Verified Modules (AVM)** it builds on (a vetted parts catalog from Microsoft and HashiCorp — the rule is *don't hand-build a part the catalog already sells*), its own policy and monitoring, runnable examples, and automated tests that run against a stand-in for Azure (no real account needed).
+Every module ships the same way: a **manifest** (`manifest.yaml`, its machine-readable spec sheet), a README, agent guidance, Terraform code pinned to exact versions of the **Azure Verified Modules (AVM)** it builds on (a vetted parts catalog from Microsoft and HashiCorp — the rule is *don't hand-build a part the catalog already sells*), the policy and monitoring appropriate to what it creates (or an explicit declaration that none apply), runnable examples, and automated tests that run against a stand-in for Azure (no real account needed).
 
 One shape repeats across all eight, and it's worth spotting: a module **takes names and tags as inputs** (it doesn't invent them) and **asks for accounts and scopes by role** (it doesn't create them). That is composition-by-output (ADR 0004) and attach-by-role (ADR 0024) showing up as a consistent house style.
 
@@ -120,11 +120,11 @@ One shape repeats across all eight, and it's worth spotting: a module **takes na
 
 **`foundation/tags`** — the tag taxonomy made executable. Produces the standard tag map from the five required, vocabulary-controlled inputs (`owner`, `env`, `cost-center`, `data-classification`, `business-criticality`) and — when given a management group — ships the **ten-policy initiative** that enforces the taxonomy estate-wide: require + allowed-values policies for resources, the same requirement applied to resource groups themselves (resource groups are where tags inherit *from*, so they can't be exempt), and an inherit-from-resource-group policy that auto-copies missing tags using the least-privilege Tag Contributor role. Promotion from watching to blocking is one input (`policy_effect = "Deny"`) backed by evidence — and a plan-time invariant fails any build where the policy JSON vocabularies drift from the module's own.
 
-**`foundation/diagnostic-settings`** — the monitoring safety net. Ships the policy initiative that detects (and, once promoted, repairs) any Key Vault, AKS cluster, Service Bus, App Service, or API Management instance whose logs aren't routing to the central workspace. It takes the workspace ID as an input — it doesn't own the workspace — and it grants its own remediation identity the exact roles repair requires, because Azure only auto-grants those when an assignment is created by hand in the portal. *Why it matters:* it's the enforcement half of the observability story — whatever slips past the golden path gets caught here.
+**`foundation/diagnostic-settings`** — the monitoring safety net. Ships the policy initiative that detects (and, once promoted, repairs) any Key Vault, AKS cluster, Service Bus, App Service, or API Management instance whose logs aren't routing to the central workspace. It takes the workspace ID as an input — it doesn't own the workspace — and it grants its own remediation identity the exact roles repair requires, because Azure only auto-grants those when an assignment is created by hand in the portal. *Why it matters:* it's the enforcement half of the observability story — across the supported resource types, whatever slips past the golden path gets caught here.
 
 **`foundation/identity`** — deliberately tiny. Two managed identities (Azure-native identities with no passwords): one for the deployment pipeline, one for policy remediation. It grants them no permissions itself — that's the adopter's call, made in the open at the assembly point.
 
-**`foundation/policy-baseline`** — the estate guardrail, and the answer to "what stops someone standing up a public App Service?" Assigned at a management group, it ships the mandatory rules every subscription beneath it inherits — App Service public access disabled and HTTPS-only, Storage public-blob access denied, resources confined to approved regions — as block-or-watch policies (and because they *block* rather than *repair*, no remediation identity is needed, unlike the diagnostic safety net). Like every bundle it watches before it blocks (ADR 0008); one input promotes it to Deny. *Why it matters:* a golden path makes the right thing easy, but it's opt-in — this makes the *defined* estate-level violations impossible, whether or not a team used a golden path (ADR 0025 §1).
+**`foundation/policy-baseline`** — the estate guardrail, and the answer to "what stops someone standing up a public App Service?" Assigned at a management group, it ships the mandatory rules every subscription beneath it inherits — App Service public access disabled and HTTPS-only, Storage public-blob access denied, resources confined to approved regions — as block-or-watch policies (and because they *block* rather than *repair*, no remediation identity is needed, unlike the diagnostic safety net). Like every bundle it watches before it blocks (ADR 0008); one input promotes it to Deny. *Why it matters:* a golden path makes the right thing easy, but it's opt-in — once this is assigned at scope and promoted to Deny, it makes the *defined* estate-level violations impossible whether or not a team used a golden path (ADR 0025 §1).
 
 **`platform-services/observability-substrate`** — the central monitoring store: a Log Analytics workspace (the log store and query engine) plus workspace-based Application Insights (application performance monitoring), an alert-routing group, and a self-protection alert that fires if anyone attempts to delete the workspace. Private by default — and honestly so: both the workspace *and* Application Insights have public ingestion and query explicitly disabled (the upstream defaults disagree with each other, so this module sets them rather than trusting them), which makes a consumer-provided **Azure Monitor Private Link Scope (AMPLS)** a documented hard prerequisite for private operation, not a surprise. Its workspace ID output is the seam the whole observability story hangs on.
 
@@ -208,7 +208,7 @@ Every policy bundle follows one lifecycle (ADR 0008): **watch first, block with 
 
 The reasoning is incentive design, not caution: a blanket ban costs its author nothing and lands its pain on everyone else, which is exactly how engineers end up on unmanaged personal subscriptions. Evidence-gated enforcement reverses the incentive — and the one stated exception (rules protecting the monitoring system block from day one) shows the principle has edges, not just vibes. The estate-wide promotion judgment stays with the platform and security teams; what the modules guarantee is that the lifecycle is *cheap to follow and visible to audit*.
 
-That lifecycle governs *how* a rule turns on. A separate question is *which* rules a workload can't escape — and the answer isn't the golden path, because a golden path is opt-in, and ADR 0004 explicitly lets a team fork one and trim it. So the **mandatory** controls don't live in the workload's box at all: `foundation/policy-baseline` ships them as an estate guardrail assigned at the management group — no public App Services, HTTPS-only, no public blobs, approved regions — inherited by every subscription beneath it whether or not a team used a golden path. The rule (ADR 0025 §1): if leaving a control out would make the estate non-compliant, the platform owns whether it exists, not the workload. That half is **built** — `policy-baseline` assigns the guardrails as Azure Policy at the management group. The other half of ADR 0025 is **decided but not yet wired**: a deployment will declare a conformance *profile*, and a plan-time check will evaluate its rendered Terraform plan against that profile before merge (Part V lists it among the unbuilt controls). So today the golden path makes compliance easy, and the baseline makes the *defined estate-level* violations impossible whether or not a team used a golden path; the plan-time gate that proves a workload's own properties is the next thing to build.
+That lifecycle governs *how* a rule turns on. A separate question is *which* rules a workload can't escape — and the answer isn't the golden path, because a golden path is opt-in, and ADR 0004 explicitly lets a team fork one and trim it. So the **mandatory** controls don't live in the workload's box at all: `foundation/policy-baseline` ships them as an estate guardrail assigned at the management group — no public App Services, HTTPS-only, no public blobs, approved regions — inherited by every subscription beneath it whether or not a team used a golden path. The rule (ADR 0025 §1): if leaving a control out would make the estate non-compliant, the platform owns whether it exists, not the workload. That half is **built** — `policy-baseline` assigns the guardrails as Azure Policy at the management group. The other half of ADR 0025 is **decided but not yet wired**: a deployment will declare a conformance *profile*, and a plan-time check will evaluate its rendered Terraform plan against that profile before merge (Part V lists it among the unbuilt controls). So today the golden path makes compliance easy, and the baseline — once assigned at scope and promoted to Deny (it ships in Audit) — makes the *defined estate-level* violations impossible through governed deployment paths, whether or not a team used a golden path; the plan-time gate that proves a workload's own properties is the next thing to build.
 
 Four layers sit behind this — two built, two decided-but-ahead:
 
@@ -276,7 +276,7 @@ flowchart LR
     audit["Watch only, 30–90 days"] -->|promote with evidence| deny["Block in production\n(dev/sandbox stay watch-only)"]
   end
   life --> map
-  decl["each rule declares the\ncontrols it satisfies\ncsf: / ncua: — ADR 0021"] --> map[[control map + evidence pack,\ngenerated, drift-checked]]
+  decl["each rule declares the\ncontrols it satisfies\ncsf: / ncua: — ADR 0021"] --> map[[control map\ngenerated, drift-checked]]
   map --> exam([the examiner])
   partners[/security & compliance partners\nsupply the control catalog/] -.-> decl
 ```
@@ -363,7 +363,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Blast radius.** How much damage one mistake can cause. Splitting things (like state files) keeps it small.
 
-**Break-glass.** An explicitly-allowed emergency change path — permitted, logged, and folded back into code within 24 hours.
+**Break-glass.** An explicitly-allowed emergency change path — permitted and logged; the decided control folds it back into code within 24 hours, through the deployment pipeline that is not yet built (Part V).
 
 **Cardinality.** Roughly, how many distinct label-combinations your monitoring data has. High cardinality is what makes monitoring bills explode; it's budgeted at the collector (ADR 0005).
 
@@ -379,15 +379,15 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Deployment ledger.** The intended automatic, tamper-evident record of every deployment — which change, which version, where, who approved — both audit record and metrics source (ADR 0020). Part of the deployment pipeline that is decided but not yet built.
 
-**Diagnostic settings.** Azure's "send this resource's logs to a workspace" feature. The safety-net module ensures it's set everywhere.
+**Diagnostic settings.** Azure's "send this resource's logs to a workspace" feature. The safety-net module ensures it's set across the resource types it supports.
 
 **DORA metrics.** Four standard delivery measures: deployment frequency, lead time, change failure rate, time to recovery.
 
-**Drift.** When the real system diverges from what the code says — usually a hand-edit. Detected on a schedule; emergencies are captured, not forbidden.
+**Drift.** When the real system diverges from what the code says — usually a hand-edit. The decided control detects it on a schedule (ADR 0007); that scheduled check is not yet built (Part V).
 
 **Egress.** Outbound network traffic. The decided posture is default-deny — exits only through the hub's audited choke point (ADR 0018) — but enforcement waits on the firewall, so today it remains an explicit gap (Part V).
 
-**Error budget.** The allowed slice of failure inside a reliability target. Spend it, and risky changes pause (ADR 0014).
+**Error budget.** The allowed slice of failure inside a reliability target. Spend it, and the workload's error-budget policy applies — pausing risky changes is one common response, chosen per team (ADR 0014).
 
 **Exemption.** An approved, documented, expiring exception to a policy rule — attached to a team, not a person (ADR 0008).
 
@@ -419,7 +419,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **OpenTelemetry (OTel).** The open, vendor-neutral format for logs, metrics, and traces. Emit once; choose the backend by configuration.
 
-**PIM (Privileged Identity Management).** Azure's "check out elevated rights for an hour, with a logged reason" feature — the only path to manual production change.
+**PIM (Privileged Identity Management).** Azure's "check out elevated rights for an hour, with a logged reason" feature. The decided posture (ADR 0019, in RFC) makes it the only path to manual production change — a target the adopter operates, not something this reference repository runs.
 
 **Policy (Azure Policy).** Azure's built-in engine for automatically checking and enforcing rules across all resources.
 
