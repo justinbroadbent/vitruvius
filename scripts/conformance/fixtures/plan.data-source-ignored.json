@@ -1,0 +1,18 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.9.8",
+  "planned_values": {
+    "root_module": {
+      "resources": [],
+      "child_modules": [
+        {
+          "address": "module.web_api",
+          "resources": [
+            { "address": "module.web_api.data.azurerm_federated_identity_credential.existing", "mode": "data", "type": "azurerm_federated_identity_credential", "name": "existing", "values": { "name": "fic-from-elsewhere" } },
+            { "address": "module.web_api.azurerm_key_vault.this", "mode": "managed", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": false } }
+          ]
+        }
+      ]
+    }
+  }
+}

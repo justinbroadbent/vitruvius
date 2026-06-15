@@ -6,6 +6,7 @@
       "resources": [
         {
           "address": "azurerm_resource_group.workload",
+          "mode": "managed",
           "type": "azurerm_resource_group",
           "name": "workload",
           "values": {
@@ -16,18 +17,19 @@
         },
         {
           "address": "azurerm_storage_account.data",
+          "mode": "managed",
           "type": "azurerm_storage_account",
           "name": "data",
-          "values": { "name": "stpaylinkprod", "location": "eastus2", "allow_nested_items_to_be_public": false }
+          "values": { "name": "stpaylinkprod", "location": "eastus2", "allow_nested_items_to_be_public": false, "tags": { "data-classification": "confidential", "business-criticality": "tier-1" } }
         }
       ],
       "child_modules": [
         {
           "address": "module.web_api",
           "resources": [
-            { "address": "module.web_api.azurerm_key_vault.this", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": false } },
-            { "address": "module.web_api.azurerm_user_assigned_identity.this", "type": "azurerm_user_assigned_identity", "name": "this", "values": { "name": "id-paylink-prod", "location": "eastus" } },
-            { "address": "module.web_api.azurerm_federated_identity_credential.this", "type": "azurerm_federated_identity_credential", "name": "this", "values": { "name": "fic-paylink-prod" } }
+            { "address": "module.web_api.azurerm_key_vault.this", "mode": "managed", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus", "public_network_access_enabled": false } },
+            { "address": "module.web_api.azurerm_user_assigned_identity.this", "mode": "managed", "type": "azurerm_user_assigned_identity", "name": "this", "values": { "name": "id-paylink-prod", "location": "eastus" } },
+            { "address": "module.web_api.azurerm_federated_identity_credential.this", "mode": "managed", "type": "azurerm_federated_identity_credential", "name": "this", "values": { "name": "fic-paylink-prod" } }
           ]
         }
       ]

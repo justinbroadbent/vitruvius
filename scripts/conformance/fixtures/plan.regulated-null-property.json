@@ -8,8 +8,8 @@
         {
           "address": "module.web_api",
           "resources": [
-            { "address": "module.web_api.azurerm_key_vault.this", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus" } },
-            { "address": "module.web_api.azurerm_federated_identity_credential.this", "type": "azurerm_federated_identity_credential", "name": "this", "values": { "name": "fic-paylink-prod" } }
+            { "address": "module.web_api.azurerm_key_vault.this", "mode": "managed", "type": "azurerm_key_vault", "name": "this", "values": { "name": "kv-paylink-prod", "location": "eastus" } },
+            { "address": "module.web_api.azurerm_federated_identity_credential.this", "mode": "managed", "type": "azurerm_federated_identity_credential", "name": "this", "values": { "name": "fic-paylink-prod" } }
           ]
         }
       ]

@@ -12,7 +12,9 @@ Rules assert real planned resources and values, never which modules a root calls
 | Profile | For | Checks |
 |---|---|---|
 | `platform-baseline/v1` | the platform foundation root | approved regions, no public blob (platform-layer completeness rules are a follow-up) |
-| `regulated-workload/v1` | an internal workload handling member NPI | **requires** a federated workload identity; **forbids** static client secrets; Key Vault / App Service no-public-access, App Service HTTPS-only, no public blob, approved regions |
+| `regulated-workload/v1` | an internal workload handling member NPI | **requires** a federated workload identity; **forbids** static client secrets; Key Vault / App Service no-public-access, App Service HTTPS-only, no public blob, approved regions; **tags match the descriptor's classification** |
+
+Rules act on **managed** resources only — a data source never satisfies a `require_resource`, trips a `forbid_resource`, or is asserted on. `tags_match_descriptor` (§5) checks the plan's tags against the descriptor's `data-classification` / `business-criticality`: the resource group carries the exact values, types the profile names as direct-tag-required fail closed if untagged, any resource that *explicitly* tags otherwise is a contradiction, and resources that simply omit the tags are fine (Azure Policy inherits them — the gate does not duplicate the runtime layer or guess universal taggability). The allowed values come from one source, `modules/foundation/tags/vocabularies.yaml`, drift-checked into the descriptor schema, the tags module, and the policies by `scripts/validate-vocabularies.py`.
 
 ## Exemptions
 
@@ -23,7 +25,7 @@ A descriptor `exceptions` entry waives a rule only when it references a record i
 The descriptor schema, the profiles, the evaluator (completeness + correctness + forbid rules + exemption lifecycle), and the plan fixtures are built and exercised in CI (`scripts/evaluate-conformance.py --self-test`). What is **not** yet built:
 
 - **Live wiring.** Feeding a *real* rendered plan into the gate on every pull request needs the deployment pipeline ([ADR 0020](../docs/decisions/0020-cicd-azure-devops-pipelines.md)) to produce `terraform show -json` from an authenticated plan — itself a planned control.
-- **Descriptor-driven classification/reliability.** ADR 0025 §5's rule that the descriptor *renders* the mandatory tags and a rule confirms the plan matches is not yet implemented.
+- **Reliability commitments.** The descriptor declares SLO/RTO/RPO ([ADR 0014](../docs/decisions/0014-slos-as-a-discipline.md)/[0015](../docs/decisions/0015-disaster-recovery-and-business-continuity.md)), but those aren't plan facts, so there is no plan rule for them — they feed downstream commitments, not the gate. (The §5 *tag* match — classification in the plan — does ship; see above.)
 - **Cross-root completeness.** `require_resource` only sees one root's plan, so it names what a root must create *itself*. `regulated-workload/v1` therefore assumes a **root-local** federated identity; a workload that consumes a platform-provided identity is a different shape and would use a future `regulated-workload-shared-identity/v1` profile. A capability a workload *consumes* from another root (a shared Key Vault, that platform identity) is out of a single plan's view; proving it needs the descriptor's `provides`/`requires` graph, which ADR 0025 defers — and it should return only when it can carry *evidence* (the provider's resource IDs, profile, and a digest showing the provider passed its own gate), not a bare claim. Relationship rules (diagnostics-per-resource, private-endpoint-per-resource) are deferred for the same reason.
 
 See `docs/IMPLEMENTATION-STATUS.md` for the current per-ADR status.
