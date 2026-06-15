@@ -14,6 +14,12 @@ metadata:
 # workload consumes from another root is out of a single plan's view (ADR 0025).
 spec:
   rules:
+    # Root-local: this requires a federated identity CREATED IN THIS ROOT. A
+    # workload that instead consumes a platform-provided identity (passed in by
+    # ID) is a different shape and would use a future profile
+    # (regulated-workload-shared-identity/v1) — a single plan cannot see a
+    # capability created in another root (ADR 0025; the provides/requires graph
+    # is deferred).
     - id: identity.workload-federation-required
       kind: require_resource
       resource_types: [azurerm_federated_identity_credential]
