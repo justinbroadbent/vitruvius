@@ -31,7 +31,7 @@ One idea runs underneath everything: **this is a reference foundation, not a fin
 
 The project is named for Vitruvius, the Roman architect who said good buildings need three things: *firmitas* (it stands up), *utilitas* (it's useful), *venustas* (it's pleasing). Every decision and every module here is reviewed against all three:
 
-- **Durable (firmitas).** Does it survive failure, an audit, and the original author quitting? Secure by default, least-privilege access, encryption everywhere, and the policy that enforces all of that shipping *with* the thing it governs.
+- **Durable (firmitas).** Does it survive failure, an audit, and the original author quitting? Secure by default, least-privilege access, encryption by default (with stronger key controls where required), and the policy that enforces all of that shipping *with* the thing it governs.
 - **Useful (utilitas).** Does it make the right way the easy way? Infrastructure that is technically correct but painful to use gets bypassed — so usefulness is an engineering requirement, not a nicety. The minimal example of every module fits on one screen.
 - **Elegant (venustas).** Can someone read it and understand it? An unreadable system is one nobody can audit or safely change. Legibility *is* a safety property.
 
@@ -39,7 +39,7 @@ These three pull against each other on purpose. Maximum durability (forbid every
 
 ## The five principles
 
-**1. Golden paths, not gold cages.** A **golden path** is a pre-built, well-supported way to do a common thing — "here's the blessed way to deploy a web API." Take it, and the hard cross-cutting concerns — identity, observability, secrets, networking, naming, tagging — are handled for you. Leave it, and you're allowed to: you take ownership of those concerns yourself and write a short ADR saying why. Nothing is forbidden; the paved road is just *so much easier* that almost nobody bothers to pave their own.
+**1. Golden paths, not gold cages.** A **golden path** is a pre-built, well-supported way to do a common thing — "here's the blessed way to deploy a web API." Take it, and the hard cross-cutting concerns — identity, observability, secrets, networking, naming, tagging — are handled for you. Leave it, and you're allowed to — but you take ownership of those concerns yourself, you still meet the mandatory estate controls (ADR 0025), and you write a short ADR saying why. Alternative architectures are allowed; skipping the mandatory floor is not. The paved road is just *so much easier* that almost nobody bothers to pave their own.
 
 **2. Decide the contract; defer the specifics.** Every decision fixes an agreed-on *shape* — like the plug shape of an electrical outlet — and deliberately leaves the *specific values* for later. Shapes are cheap to keep stable; a specific value baked in too early (a network address range, a vendor) is expensive to rip out once things depend on it. Every ADR carries two sections that enforce this: **"What this does not decide"** (the blanks, named explicitly) and **"Reversibility"** (is this a *two-way door* you can walk back, or a *one-way door* you can't — and what would undoing it cost).
 
@@ -77,7 +77,7 @@ A large part of the architecture is the deliberate avoidance of twelve specific 
 | AP-008 | Tag chaos — `env=prod`, `Env=Production`, `environment=PROD` | Five mandatory, spell-checked tags that drive automation (ADR 0010) |
 | AP-009 | Doc rot — documentation that drifts and loses trust | Generate the load-bearing docs; check them in CI (ADRs 0011, 0016, 0021) |
 | AP-010 | No golden paths — every team invents everything | Provide genuinely good paths, designed with the teams (ADR 0012) |
-| AP-011 | Lower-environment signal gap — staging flies blind | The same monitoring everywhere; only retention differs (ADR 0005) |
+| AP-011 | Lower-environment signal gap — staging flies blind | The same instrumentation and signal contract across environments; retention may differ (ADR 0005) |
 | AP-012 | Seagull architecture — design by fly-by | Open RFCs; no self-approval; adoption-gated patterns (ADR 0012) |
 
 > **In plain terms:** almost none of these traps are caused by people being dumb. They're caused by *structure* — bad team boundaries, misaligned incentives, defaults that make the wrong thing easier than the right thing. The whole philosophy is to fix the structure so the easy path and the correct path are the same path.
