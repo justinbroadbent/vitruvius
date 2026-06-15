@@ -8,7 +8,10 @@ The control logic is vendor-independent (`scripts/pipeline.py` + `scripts/evalua
 
 ```
 plan stage  (checkout)
-  terraform init ; terraform plan -out=tfplan ; terraform show -json tfplan > tfplan.json
+  pipeline.py canonical-unit   resolve the requested unit to one confined repo-relative path
+                       BEFORE any Terraform; reject absolute/traversing/outside-repo. The
+                       canonical value (CANONICAL_UNIT) is what every later step uses.
+  terraform init -lockfile=readonly ; terraform plan -out=tfplan ; terraform show -json tfplan > tfplan.json
   pipeline.py gate     validate vitruvius.yaml vs the schema; evaluate the rendered plan.
                        on PASS write plan-manifest.json: SHA-256 of every verdict input plus
                        repository/commit/environment/unit, the gate timestamp, and the exemptions
@@ -18,9 +21,11 @@ plan stage  (checkout)
 
 ── approval ──  the Environment requires an approver who is not the author (ADR 0007)
 
-apply stage  (checkout the repo at the gate's commit; the orchestration checks the actually
-              checked-out commit, git rev-parse HEAD, equals the requested one before verifying)
+apply stage  (checkout the repo at the gate's commit)
   download the bundle
+  preflight            canonicalize the unit (same as plan) and check the actually checked-out
+                       commit (git rev-parse HEAD) equals the requested one — both BEFORE any
+                       Terraform. CANONICAL_UNIT and ACTUAL_COMMIT carry forward.
   pipeline.py verify   FAIL CLOSED: reject an unsupported/missing manifest_version, missing or
                        unexpected hash keys, missing required fields, a runtime identity
                        (repository/commit/environment/canonical unit) that differs from the
@@ -28,7 +33,8 @@ apply stage  (checkout the repo at the gate's commit; the orchestration checks t
                        committed one at the pinned commit, any artifact whose hash changed, or a
                        relied-upon exemption now expired.
   terraform init -lockfile=readonly ; terraform apply tfplan   (the verified saved plan; no re-plan)
-  pipeline.py receipt  emitted for every handled verify/apply outcome (always())
+  pipeline.py receipt  emitted for every handled verify/apply outcome (always()) — including when
+                       the manifest itself is unreadable, from runtime identity passed explicitly
   publish the receipt  (always())
 ```
 

@@ -278,9 +278,45 @@ def _failure_phase(verify_result: str, apply_attempted: bool, apply_result: str)
 
 
 def cmd_receipt(args) -> int:
-    manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
-    apply_attempted = args.apply_attempted == "true"
     completed_at = args.completed_at or datetime.now(timezone.utc).isoformat()
+    try:
+        manifest = json.loads(Path(args.manifest).read_text(encoding="utf-8"))
+        manifest_error = None
+    except (OSError, ValueError) as exc:
+        manifest = None
+        manifest_error = str(exc)
+
+    if manifest is None:
+        # The manifest itself is missing or malformed — that IS a handled
+        # verify failure. The checkout and the artifact directory are available,
+        # so still emit a receipt from the runtime identity the pipeline passed
+        # explicitly, with the manifest-derived fields absent.
+        receipt = {
+            "repository": args.repository,
+            "commit": args.commit,
+            "unit": args.unit,
+            "environment": args.environment,
+            "profile": None,
+            "gated_at": None,
+            "artifact_hashes": None,
+            "exemptions_used": None,
+            "approver": args.approver,
+            "verify_result": "failed",
+            "apply_attempted": False,
+            "apply_result": "not_attempted",
+            "apply_exit_code": None,
+            "failure_phase": "verify",
+            "pipeline_result": args.pipeline_result,
+            "completed_at": completed_at,
+            "applied_at": None,
+            "manifest_readable": False,
+            "manifest_error": manifest_error,
+        }
+        Path(args.out).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
+        print(f"OK — receipt written for an unreadable manifest (phase=verify): {manifest_error}")
+        return 0
+
+    apply_attempted = args.apply_attempted == "true"
     apply_succeeded = apply_attempted and args.apply_result == "success"
     try:
         exit_code = int(args.apply_exit_code)
@@ -304,10 +340,27 @@ def cmd_receipt(args) -> int:
         "pipeline_result": args.pipeline_result,
         "completed_at": completed_at,
         "applied_at": completed_at if apply_succeeded else None,
+        "manifest_readable": True,
+        "manifest_error": None,
     }
     Path(args.out).write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
     print(f"OK — receipt written (phase={receipt['failure_phase']}, verify={args.verify_result}, apply={args.apply_result}).")
     return 0
+
+
+def cmd_canonical_unit(args) -> int:
+    """Resolve the requested deployable unit to its canonical repo-relative path.
+
+    The orchestration calls this BEFORE any Terraform command so an absolute,
+    traversing, or outside-repo path is rejected before plan/apply can run in the
+    wrong place. Prints only the canonical path on success.
+    """
+    try:
+        print(canonical_unit(args.unit))
+        return 0
+    except PipelineError as exc:
+        print(f"FAIL {exc}", file=sys.stderr)
+        return 1
 
 
 def contract_test() -> list[str]:
@@ -361,10 +414,10 @@ def contract_test() -> list[str]:
     elif co >= 0 and co > vi:
         problems.append("checkout must occur before verification")
 
+    if "git rev-parse HEAD" not in apply_text:
+        problems.append("apply job must check the actual checked-out commit (git rev-parse HEAD)")
     if vi >= 0:
         vt = texts[vi]
-        if "git rev-parse HEAD" not in vt:
-            problems.append("verify step must check the actual checked-out commit (git rev-parse HEAD)")
         for flag in ("--repository", "--commit", "--environment", "--unit"):
             if flag not in vt:
                 problems.append(f"verify step must pass {flag}")
@@ -378,11 +431,37 @@ def contract_test() -> list[str]:
 
     if ri < 0:
         problems.append("apply job must emit a receipt")
-    elif steps[ri].get("condition") != "always()":
-        problems.append("receipt step must use condition: always()")
+    else:
+        if steps[ri].get("condition") != "always()":
+            problems.append("receipt step must use condition: always()")
+        rt = texts[ri]
+        for flag in ("--repository", "--commit", "--environment", "--unit"):
+            if flag not in rt:
+                problems.append(f"receipt step must pass {flag} (for the unreadable-manifest fallback)")
     pub = next((s for s in steps if s.get("publish") and "receipt" in json.dumps(s)), None)
     if not pub or pub.get("condition") != "always()":
         problems.append("receipt publication must use condition: always()")
+
+    # The raw $(TF_ROOT) parameter must be canonicalized BEFORE any Terraform
+    # command, and must not reach a filesystem/Terraform operation afterward — the
+    # canonical $(CANONICAL_UNIT) variable carries it from there.
+    def assert_canonical(stage_name: str, steps_list: list) -> None:
+        texts_l = [json.dumps(s) for s in steps_list]
+        pre = next((i for i, t in enumerate(texts_l) if "canonical-unit" in t), -1)
+        if pre < 0:
+            problems.append(f"{stage_name} stage must canonicalize the unit (pipeline.py canonical-unit) before Terraform")
+            return
+        tf = next((i for i, t in enumerate(texts_l) if "terraform plan" in t or "terraform apply" in t), -1)
+        if tf >= 0 and pre > tf:
+            problems.append(f"{stage_name} stage must canonicalize the unit before the first Terraform command")
+        for i, t in enumerate(texts_l):
+            if i != pre and "$(TF_ROOT)" in t:
+                problems.append(f"{stage_name} stage uses raw $(TF_ROOT) after canonicalization (step {i}); use $(CANONICAL_UNIT)")
+
+    assert_canonical("plan", plan_steps)
+    assert_canonical("apply", steps)
+    if "CANONICAL_UNIT" not in plan_text or "CANONICAL_UNIT" not in apply_text:
+        problems.append("both stages must use $(CANONICAL_UNIT) for gate/verify/apply paths")
 
     return problems
 
@@ -504,6 +583,25 @@ def self_test() -> list[str]:
     r_fail = receipt(verify_result="success", apply_attempted="true", apply_result="failed", apply_exit_code="1", pipeline_result="Failed")
     if r_fail["failure_phase"] != "apply" or r_fail["apply_exit_code"] != 1 or r_fail.get("applied_at") is not None:
         problems.append("a failed-apply receipt must record failure_phase 'apply', the exit code, and applied_at=null")
+    if r_ok.get("manifest_readable") is not True:
+        problems.append("a receipt over a readable manifest must record manifest_readable=true")
+
+    # a malformed/unreadable manifest still yields a handled failed-verify receipt
+    # from the runtime identity the pipeline passed explicitly.
+    bad_man = Path(tempfile.mkdtemp()) / "plan-manifest.json"
+    bad_man.write_text("{ not valid json", encoding="utf-8")
+    bad_out = Path(tempfile.mkdtemp()) / "r.json"
+    run(cmd_receipt, manifest=str(bad_man), approver="reviewer@org", completed_at="2026-06-15T00:00:00+00:00",
+        verify_result="failed", apply_attempted="false", apply_result="not_attempted", apply_exit_code="-1",
+        pipeline_result="Failed", repository="org/vitruvius", commit="abc123", environment="dev",
+        unit="examples/workload-onboarding", out=str(bad_out))
+    rb = json.loads(bad_out.read_text())
+    if (rb.get("manifest_readable") is not False or rb["failure_phase"] != "verify"
+            or rb["verify_result"] != "failed" or rb["apply_attempted"] is not False
+            or rb.get("applied_at") is not None or rb.get("completed_at") is None
+            or rb["unit"] != "examples/workload-onboarding" or rb["commit"] != "abc123"
+            or rb.get("artifact_hashes") is not None or rb.get("manifest_error") is None):
+        problems.append("a malformed manifest must still produce a failed-verify receipt from runtime identity")
 
     # descriptor / profile must be git-anchored: a replaced bundle descriptor or a
     # manifest profile that disagrees with the committed descriptor is refused.
@@ -555,6 +653,9 @@ def main() -> int:
     for a in ("--root", "--manifest", "--repository", "--commit", "--environment", "--unit"):
         v.add_argument(a, required=True)
 
+    c = sub.add_parser("canonical-unit")
+    c.add_argument("--unit", required=True)
+
     r = sub.add_parser("receipt")
     r.add_argument("--manifest", required=True)
     r.add_argument("--approver", required=True)
@@ -564,6 +665,9 @@ def main() -> int:
     r.add_argument("--apply-exit-code", required=True, dest="apply_exit_code")
     r.add_argument("--pipeline-result", required=True, dest="pipeline_result")
     r.add_argument("--completed-at", dest="completed_at", default=None)
+    # Runtime identity for the fallback receipt when the manifest is unreadable.
+    for a in ("--repository", "--commit", "--environment", "--unit"):
+        r.add_argument(a, default=None)
     r.add_argument("--out", required=True)
 
     ap.add_argument("--self-test", action="store_true")
@@ -579,9 +683,10 @@ def main() -> int:
         print("OK — verdict-input binding, fail-closed verify, exact-plan selection, bundle isolation, and per-outcome receipts all behave.")
         return 0
 
-    dispatch = {"gate": cmd_gate, "bundle": cmd_bundle, "verify": cmd_verify, "receipt": cmd_receipt}
+    dispatch = {"gate": cmd_gate, "bundle": cmd_bundle, "verify": cmd_verify,
+                "receipt": cmd_receipt, "canonical-unit": cmd_canonical_unit}
     if args.cmd not in dispatch:
-        ap.error("need a subcommand (gate/bundle/verify/receipt) or --self-test")
+        ap.error("need a subcommand (gate/bundle/verify/receipt/canonical-unit) or --self-test")
     return dispatch[args.cmd](args)
 
 
