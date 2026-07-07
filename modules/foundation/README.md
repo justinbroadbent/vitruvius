@@ -10,6 +10,7 @@ The foundation layer. Modules that everything else depends on or composes agains
 | [`tags/`](./tags/) | experimental | Authority on the tag taxonomy ([ADR 0010](../../docs/decisions/0010-tag-taxonomy.md)). Produces a tag map and ships the policy initiative that enforces the taxonomy. |
 | [`diagnostic-settings/`](./diagnostic-settings/) | experimental | Substrate-routing safety net. Ships the policy initiative that ensures common Azure resources route diagnostic settings to the platform Log Analytics workspace ([ADR 0005](../../docs/decisions/0005-observability-substrate-and-signal-parity.md)). |
 | [`identity/`](./identity/) | experimental | Platform-baseline user-assigned managed identities. Identity primitives only — no role assignments, no custom roles, no federation; deliberately minimal pending real RBAC strategy decisions. |
+| [`policy-baseline/`](./policy-baseline/) | experimental | Estate guardrail initiative — the mandatory, platform-owned controls ([ADR 0025](../../docs/decisions/0025-deployment-conformance-and-platform-baseline.md) §1) assigned at management-group scope. |
 
 ## What goes in foundation vs other areas
 
@@ -21,6 +22,6 @@ Foundation is for primitives that:
 
 Things that are **not** foundation:
 
-- Networking primitives — `modules/networking/` (deferred).
-- Shared platform services like the LAW itself, central secret stores, the container registry — `modules/platform-services/` (the observability substrate ships; the rest is deferred).
+- Networking primitives — `modules/networking/` (the hub ships; the firewall and spokes are deferred).
+- Shared platform services like the LAW itself, the AKS cluster, central secret stores, the container registry — `modules/platform-services/` (the observability substrate and the AKS cluster ship; the rest is deferred).
 - Workload shapes — `modules/workload-patterns/`.

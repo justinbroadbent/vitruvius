@@ -25,7 +25,7 @@ There is a second question: how much of the low-level plumbing (the raw **AzureR
 
 ## Decision
 
-**Terraform** is the IaC tool. We anchor every module on top of [Azure Verified Modules (AVM)](https://azure.github.io/Azure-Verified-Modules/) — a library of pre-built Terraform modules vetted jointly by Microsoft and HashiCorp (the company behind Terraform). Think of AVM as a trusted parts catalog.
+**Terraform** is the IaC tool. We anchor every module on top of [Azure Verified Modules (AVM)](https://azure.github.io/Azure-Verified-Modules/) — a library of pre-built Terraform modules maintained by Microsoft and published as verified modules on the Terraform Registry. Think of AVM as a trusted parts catalog.
 
 We do **not** use Azure Blueprints (deprecated), and we do **not** hand-build primitives that AVM already provides.
 

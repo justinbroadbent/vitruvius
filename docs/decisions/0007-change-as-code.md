@@ -19,7 +19,7 @@ Two failure modes shape this decision:
 - [AP-004 — Configuration drift](../anti-patterns.md#ap-004--configuration-drift) — people fix things by hand in the Azure portal; the manual changes pile up; the Terraform code no longer matches reality; and the knowledge of what was changed, and why, leaves when the person who did it leaves.
 - [AP-007 — Change-management theater](../anti-patterns.md#ap-007--change-management-theater) — the old-style weekly approval meeting (a **CAB**, or Change Advisory Board, from the ITIL process framework) consumes weeks of approvals while emergency changes bypass it entirely — so the controls don't apply exactly where they are needed most.
 
-Our regulators (NCUA and GLBA) expect documented authorization, segregation of duties (the person who writes a change is not the one who approves it), change records, and traceability. They specify *outcomes*, not weekly meetings. Modern engineering tooling satisfies those outcomes with greater fidelity than CAB-based processes.
+The regulatory frame — NCUA examination standards and GLBA safeguards obligations — expects documented authorization, segregation of duties (the person who writes a change is not the one who approves it), change records, and traceability. Regulators specify *outcomes*, not weekly meetings. Modern engineering tooling satisfies those outcomes with greater fidelity than CAB-based processes.
 
 ## Decision
 

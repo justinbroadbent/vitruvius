@@ -45,7 +45,7 @@ vitruvius/
   modules/
     foundation/             # naming, tags, diagnostic-settings, identity, policy-baseline
     networking/             # hub (VNet, private DNS, AMPLS); firewall + spokes planned
-    platform-services/      # observability-substrate; planned: secrets, container-registry
+    platform-services/      # observability-substrate, aks-cluster; planned: secrets, container-registry
     workload-patterns/      # web-api-aks; planned: function-event-driven,
                             # data-pipeline, apim-bff (the SaaS-core integration shape)
   examples/
@@ -82,7 +82,7 @@ vitruvius/
 
 ## What's runnable today (v0.1.0)
 
-Seven modules and two reference compositions. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
+The modules below plus two reference compositions. All experimental — module status per [ADR 0012](./docs/decisions/0012-collaborative-design.md) lifecycle. Every module ships with `manifest.yaml`, examples, and `terraform test` coverage.
 
 | Layer | Module | What it does |
 |---|---|---|
@@ -90,8 +90,10 @@ Seven modules and two reference compositions. All experimental — module status
 | foundation | [`tags`](./modules/foundation/tags/) | Tag taxonomy + the policy initiative that enforces it. |
 | foundation | [`diagnostic-settings`](./modules/foundation/diagnostic-settings/) | Substrate-routing safety-net policy initiative. |
 | foundation | [`identity`](./modules/foundation/identity/) | Platform-baseline managed identities (deliberately minimal). |
+| foundation | [`policy-baseline`](./modules/foundation/policy-baseline/) | Estate guardrail initiative — the mandatory controls assigned at management-group scope (ADR 0025 §1). |
 | networking | [`hub`](./modules/networking/hub/) | Hub VNet, centralized private DNS, and the AMPLS. Firewall deferred to v0.2. |
 | platform-services | [`observability-substrate`](./modules/platform-services/observability-substrate/) | The central LAW + App Insights store every module's diagnostics route to. |
+| platform-services | [`aks-cluster`](./modules/platform-services/aks-cluster/) | Platform-run AKS cluster — hardened posture fixed, `oidc_issuer_url` is the workload seam (ADR 0026). |
 | workload-pattern | [`web-api-aks`](./modules/workload-patterns/web-api-aks/) | Containerized HTTP API on AKS — workload identity, KV via AVM, hardening initiative. |
 
 [`examples/reference-landingzone/`](./examples/reference-landingzone/) wires the modules together end-to-end — the worked demonstration of composition by output data (ADR 0004).

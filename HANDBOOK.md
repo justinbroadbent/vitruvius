@@ -96,10 +96,10 @@ vitruvius/
     composition.md           # how modules layer; which shapes are forbidden
     anti-patterns.md         # the twelve failure modes
     IMPLEMENTATION-STATUS.md # generated: where each accepted ADR stands (built vs planned)
-    decisions/               # 22 plain-language ADRs + a generated index
+    decisions/               # plain-language ADRs + a generated index
   modules/
     foundation/              # naming, tags, diagnostic-settings, identity, policy-baseline
-    platform-services/       # observability-substrate (more planned)
+    platform-services/       # observability-substrate, aks-cluster (more planned)
     workload-patterns/       # web-api-aks (more planned)
     networking/              # hub (VNet, private DNS, AMPLS); firewall + spokes v0.2
   examples/
@@ -114,11 +114,11 @@ vitruvius/
   .github/workflows/ci.yml   # the checks (see "What the checks prove")
 ```
 
-## The eight modules
+## The modules
 
-Every module ships the same way: a **manifest** (`manifest.yaml`, its machine-readable spec sheet), a README, agent guidance, Terraform code pinned to exact versions of the **Azure Verified Modules (AVM)** it builds on (a vetted parts catalog from Microsoft and HashiCorp — the rule is *don't hand-build a part the catalog already sells*), the policy and monitoring appropriate to what it creates (or an explicit declaration that none apply), runnable examples, and automated tests that run against a stand-in for Azure (no real account needed).
+Every module ships the same way: a **manifest** (`manifest.yaml`, its machine-readable spec sheet), a README, agent guidance, Terraform code pinned to exact versions of the **Azure Verified Modules (AVM)** it builds on (a vetted parts catalog maintained by Microsoft — the rule is *don't hand-build a part the catalog already sells*), the policy and monitoring appropriate to what it creates (or an explicit declaration that none apply), runnable examples, and automated tests that run against a stand-in for Azure (no real account needed).
 
-One shape repeats across all eight, and it's worth spotting: a module **takes names and tags as inputs** (it doesn't invent them) and **asks for accounts and scopes by role** (it doesn't create them). That is composition-by-output (ADR 0004) and attach-by-role (ADR 0024) showing up as a consistent house style.
+One shape repeats across every module, and it's worth spotting: a module **takes names and tags as inputs** (it doesn't invent them) and **asks for accounts and scopes by role** (it doesn't create them). That is composition-by-output (ADR 0004) and attach-by-role (ADR 0024) showing up as a consistent house style.
 
 **`foundation/naming`** — pure logic; creates nothing in the cloud. Give it the org, workload, environment, and region; it returns the correct standardized name for each resource type (`rg-wsx-platform-dev-eus-01`, …). Inputs are validated hard — no leading, trailing, or doubled hyphens that Azure would reject at deploy time — and when a name would exceed a resource type's length cap, it falls back to a compact form with a deterministic hash, never silent truncation. *Why it matters:* predictable names are what make the catalog, dashboards, and drift detection trustworthy.
 
@@ -131,6 +131,8 @@ One shape repeats across all eight, and it's worth spotting: a module **takes na
 **`foundation/policy-baseline`** — the estate guardrail, and the answer to "what stops someone standing up a public App Service?" Assigned at a management group, it ships the mandatory rules every subscription beneath it inherits — App Service public access disabled and HTTPS-only, Storage public-blob access denied, resources confined to approved regions — as block-or-watch policies (and because they *block* rather than *repair*, no remediation identity is needed, unlike the diagnostic safety net). Like every bundle it watches before it blocks (ADR 0008); one input promotes it to Deny. *Why it matters:* a golden path makes the right thing easy, but it's opt-in — once this is assigned at scope and promoted to Deny, it makes the *defined* estate-level violations impossible whether or not a team used a golden path (ADR 0025 §1).
 
 **`platform-services/observability-substrate`** — the central monitoring store: a Log Analytics workspace (the log store and query engine) plus workspace-based Application Insights (application performance monitoring), an alert-routing group, and a self-protection alert that fires if anyone attempts to delete the workspace. Private by default — and honestly so: both the workspace *and* Application Insights have public ingestion and query explicitly disabled (the upstream defaults disagree with each other, so this module sets them rather than trusting them), which makes a consumer-provided **Azure Monitor Private Link Scope (AMPLS)** a documented hard prerequisite for private operation, not a surprise. Its workspace ID output is the seam the whole observability story hangs on.
+
+**`platform-services/aks-cluster`** — the platform-run Kubernetes cluster workloads federate into (ADR 0026). Its security posture is fixed, not tunable through inputs: a private control plane, Entra ID with Azure RBAC and local accounts disabled (there is no cluster password to steal or rotate), workload identity and the OIDC issuer switched on, diagnostics routed to the substrate, and automatic patching. Everything concrete — the subnet it joins, the DNS zone, the workspace, the admin groups — arrives as an input; the module decides *posture*, never *infrastructure*. Its `oidc_issuer_url` output is the seam every workload pattern federates into with no shared secret. Terraform stops at the Azure control plane: what runs *inside* the cluster is the workload team's own delivery pipeline, not this repository's Terraform.
 
 **`networking/hub`** — the decided core of the network (ADR 0018). A hub virtual network, the centralized private DNS zones the shipped modules require (the default list is exactly what they need, not a guess), and the **AMPLS** that makes the substrate's private-by-default posture actually work, with the observability resources scoped into it. It deliberately stops where the next line would be a guess: the firewall — product, SKU, egress rules — waits for a real estate's requirements (#9), and the control map declares the resulting default-deny-egress gap out loud rather than pretending. *Why it matters:* private operation needs somewhere private to land, and this is it; the addressing discipline is locked in now, while re-numbering is still free.
 
@@ -158,7 +160,7 @@ The assembler has a mirror image: `examples/workload-onboarding` is the same com
 Every push runs, in CI:
 
 - **Format and validity** — `terraform fmt` and `terraform validate` across every module and example.
-- **Tests** — every module's `terraform test` suite (over a hundred assertions across the eight), including negative tests that prove the input validation actually rejects what it claims to.
+- **Tests** — every module's `terraform test` suite, including negative tests that prove the input validation actually rejects what it claims to.
 - **Manifest validation** — every module's manifest parses, validates against the JSON Schema, and **agrees with the module's actual code**: inputs mirror `variables.tf` (names and required-ness, both directions), outputs mirror `outputs.tf`, declared dependencies match what's really used, declared policy and monitoring artifacts actually exist, examples and tests on disk are all declared, and every cited decision and anti-pattern resolves. Every policy JSON is syntax-checked.
 - **Generated views can't drift** — four derived documents are regenerated on every pull request and fail the build if they don't match their source: the ADR index (from the decisions' own metadata), each module's Backstage `catalog-info.yaml` (from its manifest), the compliance control map (from the declared mappings — which also fails if a mapping references a policy file that no longer exists), and the implementation-status report (from `docs/implementation-status.yaml` — which also fails if an accepted ADR has no status entry).
 - **Coverage by construction** — the lists of modules and examples to check are *discovered from the repository*, not hand-maintained, so a new module physically cannot merge without CI coverage.
@@ -167,7 +169,7 @@ Every push runs, in CI:
 
 > **In plain terms:** the spec sheet can't lie about the code, the catalog can't lie about the modules, the compliance map can't lie about the rules, and nothing ships untested — and none of that depends on a human remembering to check. The clearest way to see each gate is to break it: rename a policy the control map cites and the build refuses.
 
-The catalog half of this was validated against the real consumer: a throwaway Backstage instance ingested the generated entities — one Domain, four Systems, eight Components — with zero schema errors, then was deleted. The claim "point your Backstage at this repo and the catalog populates" is a tested fact, while *operating* a portal still waits for its triggers (ADR 0016).
+The catalog half of this was validated against the real consumer: a throwaway Backstage instance ingested the generated entities — one Domain, a System per area, a Component per module — with zero schema errors, then was deleted. The claim "point your Backstage at this repo and the catalog populates" is a tested fact, while *operating* a portal still waits for its triggers (ADR 0016).
 
 **And honestly:** several controls are decided but not yet built — *live execution* of the deployment pipeline (its plan → conformance gate → hash-verify → exact-plan apply → receipt slice is built and fixture-tested in `pipelines/`, but running it needs an Azure DevOps org and real Azure), the durable append-only *ledger service* that aggregates the per-deployment receipts (ADRs 0007/0020), the break-glass back-fill, static-analysis scanning, the manifest's softer semantic warnings, the OTel collector deployment, and scheduled drift detection. [`docs/IMPLEMENTATION-STATUS.md`](./docs/IMPLEMENTATION-STATUS.md) is the canonical decided-vs-built-vs-effective list — one entry per accepted ADR, generated from structured data and drift-checked in CI — and the rule of the house is that audit-facing text never describes a planned control as live.
 
@@ -241,13 +243,13 @@ If a golden path doesn't fit, the contract is documentation, not combat: a short
 
 # Part IV — The decisions, by story
 
-Twenty-two decisions, four stories. Each ADR is written in plain language and stands alone; this is the connective tissue.
+The decisions tell four stories. Each ADR is written in plain language and stands alone; this is the connective tissue.
 
 ## Story 1 — The infrastructure
 
 *The platform owns the shapes and rules; the adopter owns the specific values.*
 
-**Terraform on AVM** (0001) is the foundation tool — reserve your effort for judgment, not plumbing. **Composition, not orchestration** (0004) is the assembly rule. **Attach by role** (0024) is how it plugs into your account tree without owning it. **Split, vault-like state** (0017) is where the record of what's deployed lives.
+**Terraform on AVM** (0001) is the foundation tool — reserve your effort for judgment, not plumbing. **Composition, not orchestration** (0004) is the assembly rule. **Attach by role** (0024) is how it plugs into your account tree without owning it. **Split, vault-like state** (0017) is where the record of what's deployed lives. **Platform-run clusters** (0026) — the platform runs Kubernetes and workloads federate in; Terraform stops at the Azure control plane, and what runs inside the cluster belongs to the workload team's own delivery pipeline.
 
 ```mermaid
 flowchart TB
@@ -327,6 +329,7 @@ The split that repeats three times (0013, 0014, 0015): **the platform builds the
 | 0021 | Generate the compliance map from the rules so it can't go stale. |
 | 0024 | Attach to the customer's account tree by role; don't reinvent it. |
 | 0025 | Mandatory controls are platform-owned (built); a declared profile is checked against the plan by an evaluator (built, fixture-tested); live PR wiring pending the pipeline. |
+| 0026 | The platform runs the clusters; workloads federate in; Terraform stops at the Azure control plane. |
 
 Numbering is monotonic, not dense: a gap is a seat held for a decision, not a deleted record. **ADR 0019** (platform identity and privileged access — group-based access, just-in-time elevation, break-glass, separation of duties) has graduated from reserved slot to **open draft RFC**, accumulating comment per ADR 0012 before anyone may call it accepted — the collaborative process running in public, not described. **0022** (customer-managed keys and the secrets platform, #14) and **0023** (FinOps as a cross-cutting concern, #16) remain reserved.
 
@@ -342,7 +345,7 @@ This section is easy to mistake for a to-do list. It is the opposite: each item 
 - **The OTel collector deployment.** The most load-bearing unbuilt artifact in the observability story — the substrate it writes into is real; the collector runs on application compute and lands with the first workload that needs it.
 - **The Backstage portal — but no longer the catalog.** The generator shipped, and the contract was validated against a real Backstage instance (it ingested everything cleanly, then was deleted). What remains deferred is exactly what should be: *operating* a portal, which waits for an estate to catalog, enough services that a portal beats a spreadsheet, and a named operator.
 - **The compliance control catalog — but no longer the machine.** The generator and drift gate run in CI, and two exemplar control families ship as concrete claims. What remains deferred is the *content* judgment — which controls, satisfied by which policies, to which examiner's standard — because that belongs to the security and compliance partners (#13), and a platform team answering it alone is the seagull trap in compliance clothing.
-- **Decisions still in flight.** Platform identity and privileged access is now an open RFC (ADR 0019, #10) rather than a reserved number; **customer-managed keys and the secrets platform** (ADR 0022, #14), **FinOps as a cross-cutting concern** (ADR 0023, #16), and the **AKS cluster baseline** the golden path consumes each still deserve their own RFC, not a paragraph smuggled into someone else's.
+- **Decisions still in flight.** Platform identity and privileged access is now an open RFC (ADR 0019, #10) rather than a reserved number; **customer-managed keys and the secrets platform** (ADR 0022, #14) and **FinOps as a cross-cutting concern** (ADR 0023, #16) remain reserved. The **AKS cluster baseline** has since graduated: ADR 0026 decides the platform-run posture and `platform-services/aks-cluster` ships it. Newly named as open — deliberately, because the real network is unknown: the **public ingress edge** (which edge product, WAF posture, TLS termination, DDoS tier). It gets a reserved slot when a real workload needs a public entrance, not a guess before then.
 - **All the concrete real-world values.** Account IDs, address ranges, regions, retention numbers per environment, every team's reliability and recovery targets — labeled blanks with sensible defaults, because the real environment is unknown and guesses age into liabilities.
 
 Notice the pattern in the first four bullets: deferrals here don't just sit — they *graduate* when their triggers fire. The catalog generator and the compliance machine were both named deferrals in earlier versions of this very section; both are now running code, and what remains deferred in each is precisely the part whose trigger hasn't fired. That's the deferral discipline working as designed.
@@ -353,7 +356,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 # Glossary
 
-**ADR (Architecture Decision Record).** A short document capturing one decision: situation, choice, what was left open, reversibility. This repo has 22, written in plain language.
+**ADR (Architecture Decision Record).** A short document capturing one decision: situation, choice, what was left open, reversibility. Written in plain language throughout this repo.
 
 **AKS (Azure Kubernetes Service).** Azure's managed Kubernetes — runs containerized applications and handles the cluster plumbing.
 
@@ -365,7 +368,7 @@ Notice the pattern in the first four bullets: deferrals here don't just sit — 
 
 **Audit / Deny.** The two modes of a policy rule: *Audit* watches and reports; *Deny* blocks. Rules here start in Audit and graduate on evidence (ADR 0008).
 
-**AVM (Azure Verified Modules).** A vetted catalog of pre-built Terraform building blocks from Microsoft and HashiCorp. House rule: don't rebuild a part the catalog already sells — and pin the exact version you tested.
+**AVM (Azure Verified Modules).** A vetted catalog of pre-built Terraform building blocks maintained by Microsoft. House rule: don't rebuild a part the catalog already sells — and pin the exact version you tested.
 
 **Blast radius.** How much damage one mistake can cause. Splitting things (like state files) keeps it small.
 
