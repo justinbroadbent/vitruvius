@@ -67,8 +67,8 @@ def adr_frontmatter() -> dict[str, dict]:
     return out
 
 
-def join(items: list) -> str:
-    return "<br>".join(str(i) for i in items) if items else "—"
+def inline(items: list) -> str:
+    return "; ".join(str(i) for i in items) if items else "—"
 
 
 def main() -> int:
@@ -153,13 +153,23 @@ def main() -> int:
             planned = e.get("planned", []) or []
             tracking = e.get("tracking", []) or []
             track = f" _(tracking: {', '.join('#' + str(t) for t in tracking)})_" if tracking else ""
+
+            def block(head: str, items: list, suffix: str = "") -> None:
+                # One item stays inline; several become a nested list instead of
+                # a single line glued together with <br>.
+                if len(items) <= 1:
+                    lines.append(f"  - {head}: {inline(items)}{suffix}")
+                else:
+                    lines.append(f"  - {head}:{suffix}")
+                    lines.extend(f"    - {i}" for i in items)
+
             if s == "implemented":
-                lines.append(f"- **{label}** — {join(built)}")
+                lines.append(f"- **{label}** — {inline(built)}")
             else:
                 lines.append(f"- **{label}**")
                 if built:
-                    lines.append(f"  - Built: {join(built)}")
-                lines.append(f"  - Planned: {join(planned)}{track}")
+                    block("Built", built)
+                block("Planned", planned, track)
         lines.append("")
 
     OUT.write_text("\n".join(lines).rstrip("\n") + "\n", encoding="utf-8")

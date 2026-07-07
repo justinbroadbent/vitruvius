@@ -7,8 +7,8 @@ Workload pattern for a containerized web API running on AKS. Provisions the **Az
 **Is:** the cross-cutting wiring an HTTP-API workload needs on Azure to be secure, observable, and policy-governed by default. Identity is workload-identity-federated (no static secrets per [ADR 0009](../../../docs/decisions/0009-secrets-ephemeral-by-default.md)). Secrets live in a per-workload Key Vault that the workload's UAI has `Key Vault Secrets User` on. Diagnostic logs flow to the platform LAW per [ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md). KV hardening is enforced by the policy initiative this module ships.
 
 **Isn't:**
-- The AKS cluster itself. Today the cluster is the consumer's to provide; this module takes its OIDC issuer URL as input. A platform AKS baseline (cluster module plus its ADR) is future work.
-- Kubernetes resources (namespace, deployment, service, ingress). The app team owns these. The `service_account_annotations` output tells the app team which annotations to put on their `ServiceAccount` to activate workload-identity federation.
+- The AKS cluster itself. This module takes the cluster's OIDC issuer URL as input; the cluster is run by the platform ([ADR 0026](../../../docs/decisions/0026-platform-run-clusters-and-control-plane-boundary.md)) via [`platform-services/aks-cluster`](../../platform-services/aks-cluster), whose `oidc_issuer_url` output wires straight into this module's `aks_oidc_issuer_url`.
+- Kubernetes resources (namespace, deployment, service, ingress). The app team owns these — Terraform stops at the Azure control plane ([ADR 0026](../../../docs/decisions/0026-platform-run-clusters-and-control-plane-boundary.md)). The `service_account_annotations` output tells the app team which annotations to put on their `ServiceAccount` to activate workload-identity federation.
 - A multi-cluster orchestrator. One invocation = one workload's primitives on one cluster.
 
 The deliberate scope keeps the module's provider surface to azurerm-only and its contract to "what does Azure need to know about this workload."
@@ -122,13 +122,14 @@ Per [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md), AVM-firs
 
 ## What this module does NOT do (and why)
 
-- **No Kubernetes resources.** Adding the kubernetes provider doubles the provider surface and forces every consumer to wire cluster credentials. Defer to v0.2 if a real consumer needs it; until then, the app team owns their YAML.
+- **No Kubernetes resources.** Adding the kubernetes provider doubles the provider surface and forces every consumer to wire cluster credentials. The boundary is decided, not deferred ([ADR 0026](../../../docs/decisions/0026-platform-run-clusters-and-control-plane-boundary.md)): Terraform stops at the Azure control plane, and the app team owns their YAML.
 - **No APIM facade.** Cross-network HTTP exposure is a separate workload pattern (`workload-patterns/apim-bff`, deferred). Most workloads don't need APIM; pulling it into the default pattern would over-scope.
 - **Private endpoints are the consumer's subnet, this module's wiring.** `public_network_access_enabled = false` plus default-Deny ACLs means the vault is reachable *only* through a private endpoint. The `private_endpoints` input passes through to the AVM module — supply at least one (subnet and private-DNS zone IDs come from the consumer's networking per ADR 0018), or the workload identity holds a role on a vault it cannot reach.
 - **No conditional CMK by data-classification.** [ADR 0010](../../../docs/decisions/0010-tag-taxonomy.md) calls for `data-classification=restricted` to trigger CMK; this module does not yet implement that. Tracked as a v0.2 enhancement.
 
 ## Cites
 
+- Honors [ADR 0026](../../../docs/decisions/0026-platform-run-clusters-and-control-plane-boundary.md) (federates into the platform-run cluster; ships no Kubernetes-internal resources).
 - Implements [ADR 0001](../../../docs/decisions/0001-iac-terraform-with-avm.md) (AVM-first for KV).
 - Implements [ADR 0003](../../../docs/decisions/0003-modules-ship-policy-and-monitoring.md) (KV diag settings + KV-hardening initiative ship with the module).
 - Honors [ADR 0005](../../../docs/decisions/0005-observability-substrate-and-signal-parity.md) (diag logs to platform LAW).

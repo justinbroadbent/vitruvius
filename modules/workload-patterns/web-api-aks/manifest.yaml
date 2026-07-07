@@ -141,6 +141,7 @@ spec:
       - ADR-0008
       - ADR-0009
       - ADR-0010
+      - ADR-0026
     anti_patterns:
       - AP-001
       - AP-006

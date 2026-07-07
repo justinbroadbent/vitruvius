@@ -7,7 +7,7 @@ Where each accepted decision stands today — **decided** (written down), **impl
 | Status | Count | Meaning |
 |---|---|---|
 | implemented | 7 | mechanisms built and exercised here |
-| partial | 10 | some built; the rest planned |
+| partial | 11 | some built; the rest planned |
 | decided | 5 | accepted contract; no code here yet |
 | proposed | 0 | open RFC, not yet accepted |
 
@@ -21,7 +21,7 @@ Where each accepted decision stands today — **decided** (written down), **impl
 - **[ADR 0011](decisions/0011-module-manifest.md) — Module manifest as the structured contract for every module** — The manifest JSON Schema and validate-manifests.py run in CI; the manifest must agree with the code.
 - **[ADR 0024](decisions/0024-landing-zone-binding-and-scope-vocabulary.md) — The platform binds to Azure Landing Zones by role; scopes are a named vocabulary, not a hierarchy we own** — The scope-role vocabulary; the reference root resolves roles to real IDs.
 
-## Partial (10)
+## Partial (11)
 
 - **[ADR 0002](decisions/0002-observability-otel-first.md) — Observability is OpenTelemetry-first, emission target is configuration**
   - Built: The emission target is configuration; modules emit through the substrate.
@@ -31,7 +31,7 @@ Where each accepted decision stands today — **decided** (written down), **impl
   - Planned: The OTel collector; signal parity across environments is an adopter operating contract.
 - **[ADR 0007](decisions/0007-change-as-code.md) — Change management as code; break-glass is documented**
   - Built: The change-as-code controls are validated in this repository's CI.
-  - Planned: The deployment pipeline that carries the ledger<br>gated apply<br>scheduled drift detection<br>and break-glass back-fill. _(tracking: #5)_
+  - Planned: The deployment pipeline that carries the ledger, gated apply, scheduled drift detection, and break-glass back-fill. _(tracking: #5)_
 - **[ADR 0009](decisions/0009-secrets-ephemeral-by-default.md) — Secrets are ephemeral by default; static secrets are documented exceptions**
   - Built: The web-api-aks pattern uses workload-identity federation — no static secret exists to rotate.
   - Planned: The secrets platform and customer-managed keys. _(tracking: #14)_
@@ -39,35 +39,54 @@ Where each accepted decision stands today — **decided** (written down), **impl
   - Built: The RFC-as-draft-PR practice is in use (ADR 0019 is a live RFC); the module status lifecycle is followed.
   - Planned: Mechanical enforcement of no-self-approval and adoption-based promotion — today these are review conventions.
 - **[ADR 0016](decisions/0016-software-catalog-and-backstage-contract.md) — Software catalog contract — manifests are the source; Backstage is a derived view**
-  - Built: The catalog-info generator<br>the static catalog<br>and the drift gate ship and were validated against a real Backstage instance.
+  - Built: The catalog-info generator, the static catalog, and the drift gate ship and were validated against a real Backstage instance.
   - Planned: Operating the Backstage portal itself.
 - **[ADR 0018](decisions/0018-network-topology-hub-spoke.md) — Network topology is hub-spoke with default-deny egress and centralized private DNS**
-  - Built: networking/hub ships the hub VNet<br>centralized private DNS<br>and the AMPLS.
+  - Built: networking/hub ships the hub VNet, centralized private DNS, and the AMPLS.
   - Planned: The firewall (default-deny egress enforcement) and the spoke modules. _(tracking: #9)_
 - **[ADR 0020](decisions/0020-cicd-azure-devops-pipelines.md) — CI/CD architecture — OIDC-federated, plan-gated, with a generated deployment ledger**
-  - Built: Validation CI runs in GitHub Actions.<br>The reference deployment-pipeline slice (pipelines/azure-pipelines-deploy.yml) and its vendor-independent control logic (scripts/pipeline.py) — plan<br>conformance gate<br>explicit artifact bundle<br>non-author approval<br>fail-closed verify<br>apply the verified saved plan (init -lockfile=readonly on both stages<br>no re-plan)<br>and a receipt for every handled outcome (completed_at always; applied_at only on a successful apply). The gate hashes all eight verdict inputs (plan<br>plan JSON<br>descriptor<br>profile<br>evaluator<br>schema<br>exemption registry<br>controller) plus the relied-upon exemptions; verify re-checks runtime identity<br>git-anchors descriptor and profile selection to the committed descriptor at the pinned commit<br>confines the deployable unit to one canonical repo-relative path (canonicalized in a preflight before any Terraform runs<br>on both stages)<br>and checks the hash set and exemption expiry<br>failing closed; a receipt is emitted for every handled outcome — including an unreadable manifest<br>from runtime identity passed explicitly; a static contract test asserts the orchestration canonicalizes before Terraform<br>never reaches Terraform with the raw unit<br>wires checkout-before-verify and the actual-commit check<br>uses readonly lockfiles and the saved-plan apply<br>and always() receipts; all self-tested in CI.
-  - Planned: Live execution (needs an Azure DevOps org<br>an OIDC service connection<br>and real Azure).<br>The durable<br>append-only<br>queryable ledger service (ADR 0020 section 3 — the receipt is one record<br>not the service).<br>Scheduled drift detection<br>break-glass back-fill<br>and multi-environment promotion orchestration. _(tracking: #5)_
+  - Built:
+    - Validation CI runs in GitHub Actions.
+    - The reference deployment-pipeline slice (pipelines/azure-pipelines-deploy.yml) and its vendor-independent control logic (scripts/pipeline.py) — plan, conformance gate, explicit artifact bundle, non-author approval, fail-closed verify, apply the verified saved plan (init -lockfile=readonly on both stages, no re-plan), and a receipt for every handled outcome (completed_at always; applied_at only on a successful apply).
+    - The gate hashes all eight verdict inputs (plan, plan JSON, descriptor, profile, evaluator, schema, exemption registry, controller) plus the relied-upon exemptions; verify re-checks runtime identity, git-anchors descriptor and profile selection to the committed descriptor at the pinned commit, confines the deployable unit to one canonical repo-relative path (canonicalized in a preflight before any Terraform runs, on both stages), and checks the hash set and exemption expiry, failing closed.
+    - A receipt is emitted for every handled outcome — including an unreadable manifest, from runtime identity passed explicitly; a static contract test asserts the orchestration canonicalizes before Terraform, never reaches Terraform with the raw unit, wires checkout-before-verify and the actual-commit check, uses readonly lockfiles and the saved-plan apply, and always() receipts; all self-tested in CI.
+  - Planned: _(tracking: #5)_
+    - Live execution (needs an Azure DevOps org, an OIDC service connection, and real Azure).
+    - The durable, append-only, queryable ledger service (ADR 0020 section 3 — the receipt is one record, not the service).
+    - Scheduled drift detection, break-glass back-fill, and multi-environment promotion orchestration.
 - **[ADR 0021](decisions/0021-ncua-glba-control-mapping-contract.md) — Compliance control mapping is declared data; the control map is a derived view**
-  - Built: The control-mapping contract<br>mappings.yaml<br>the generated control map<br>the drift gate<br>and exemplar control families.
+  - Built: The control-mapping contract, mappings.yaml, the generated control map, the drift gate, and exemplar control families.
   - Planned: The full control catalog and the evidence pack. _(tracking: #13)_
 - **[ADR 0025](decisions/0025-deployment-conformance-and-platform-baseline.md) — Conformance is proven at plan time, not assembled; mandatory controls are platform-owned**
-  - Built: foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.<br>The conformance gate — descriptor schema<br>profiles<br>and evaluator — checks completeness (required capabilities present<br>forbidden ones absent<br>managed resources only — data sources excluded)<br>correctness (properties fail closed on missing values)<br>section 5 descriptor-to-plan tag matching (resource group exact<br>direct-tag-required types fail closed<br>contradictions caught)<br>and exemption lifecycle (owned<br>unexpired<br>rule-matched); all exercised in CI against plan fixtures.<br>A root-inventory validator (scripts/validate-roots.py) discovers every deployable root and statically asserts — with no Terraform or Azure — that each declares a schema-valid conformance descriptor whose profile resolves<br>commits a provider lockfile<br>ships no Terraform state<br>and hard-codes no backend secret; it gates CI and is self-tested. This proves the inventory of roots is each well-formed<br>the root-set companion to the per-plan gate.<br>The classification vocabulary is single-sourced (modules/foundation/tags/vocabularies.yaml) and drift-checked across the tags module<br>policies<br>and the descriptor schema.
-  - Planned: Live execution of the plan-time gate on a real rendered plan — the reference pipeline that feeds it exists (ADR 0020) but needs an Azure DevOps org and real Azure to run.<br>Relationship rules (e.g. diagnostics-per-resource) — deferred until a concrete workload triggers the first one.<br>The cross-root provides/requires capability graph — deferred until it can carry verifiable evidence<br>not a bare claim. _(tracking: #5)_
+  - Built:
+    - foundation/policy-baseline ships the estate guardrails and is assigned at the management group in the reference root.
+    - The conformance gate — descriptor schema, profiles, and evaluator — checks completeness (required capabilities present, forbidden ones absent, managed resources only — data sources excluded), correctness (properties fail closed on missing values), section 5 descriptor-to-plan tag matching (resource group exact, direct-tag-required types fail closed, contradictions caught), and exemption lifecycle (owned, unexpired, rule-matched); all exercised in CI against plan fixtures.
+    - A root-inventory validator (scripts/validate-roots.py) discovers every deployable root and statically asserts — with no Terraform or Azure — that each declares a schema-valid conformance descriptor whose profile resolves, commits a provider lockfile, ships no Terraform state, and hard-codes no backend secret; it gates CI and is self-tested. This proves the inventory of roots is each well-formed, the root-set companion to the per-plan gate.
+    - The classification vocabulary is single-sourced (modules/foundation/tags/vocabularies.yaml) and drift-checked across the tags module, policies, and the descriptor schema.
+  - Planned: _(tracking: #5)_
+    - Live execution of the plan-time gate on a real rendered plan — the reference pipeline that feeds it exists (ADR 0020) but needs an Azure DevOps org and real Azure to run.
+    - Relationship rules (e.g. diagnostics-per-resource) — deferred until a concrete workload triggers the first one.
+    - The cross-root provides/requires capability graph — deferred until it can carry verifiable evidence, not a bare claim.
+- **[ADR 0026](decisions/0026-platform-run-clusters-and-control-plane-boundary.md) — Clusters are platform-run; Terraform stops at the Azure control plane**
+  - Built: The platform-run cluster posture ships as platform-services/aks-cluster — private API server, Entra ID + Azure RBAC with local accounts disabled, workload identity and the OIDC issuer on, diagnostics to the substrate; the Terraform surface is azurerm/azapi only (no kubernetes or helm providers).
+  - Planned:
+    - Wiring the cluster into the reference root so its oidc_issuer_url feeds the workload pattern.
+    - The in-cluster delivery mechanism (GitOps tooling) — the workload team's choice, made when a real workload exists.
 
 ## Decided, not yet built (5)
 
 - **[ADR 0006](decisions/0006-service-discovery-three-layers.md) — Service discovery as three concerns with three tools**
-  - Planned: Runtime service mesh<br>the APIM cross-boundary front door<br>and the Backstage discovery layer are contracts only — none is deployed.
+  - Planned: Runtime service mesh, the APIM cross-boundary front door, and the Backstage discovery layer are contracts only — none is deployed.
 - **[ADR 0013](decisions/0013-platform-metrics-and-dora.md) — Platform health is measured; DORA is the starting frame**
-  - Planned: The DORA metrics pipeline depends on the deployment ledger<br>which is not yet built.
+  - Planned: The DORA metrics pipeline depends on the deployment ledger, which is not yet built.
 - **[ADR 0014](decisions/0014-slos-as-a-discipline.md) — SLOs are a per-workload discipline; the platform provides the framework, not the targets**
   - Built: The SLO discipline and the platform-builds-the-framework split are contracts.
   - Planned: The deployment-descriptor field carrying each workload's SLO commitment (ADR 0025).
 - **[ADR 0015](decisions/0015-disaster-recovery-and-business-continuity.md) — Disaster recovery is per-workload; the platform provides the primitives**
-  - Built: The DR discipline is a contract; some primitives (geo-redundancy<br>backup) come from AVM.
+  - Built: The DR discipline is a contract; some primitives (geo-redundancy, backup) come from AVM.
   - Planned: The descriptor field for RTO/RPO commitments; restore drills are an adopter practice.
 - **[ADR 0017](decisions/0017-terraform-state-and-backend.md) — Terraform state is per-blast-radius Azure Storage, identity-accessed and treated as a sensitive artifact**
-  - Built: The state contract (per-blast-radius<br>locked<br>split-from-the-start) is demonstrated in the reference root.
+  - Built: The state contract (per-blast-radius, locked, split-from-the-start) is demonstrated in the reference root.
   - Planned: The adopter provisions the actual state backend; the repo ships no state.
 
 ## Proposed (0)

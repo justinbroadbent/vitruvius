@@ -1,0 +1,135 @@
+apiVersion: vitruvius.io/v1
+kind: Module
+metadata:
+  name: aks-cluster
+  area: platform-services
+  version: 0.1.0
+  status: experimental
+  owner: platform-team
+  description: Platform-run AKS cluster — private API server, Entra/Azure RBAC with local accounts disabled, OIDC issuer and workload identity on, diagnostics to the substrate. The cluster workloads federate into.
+
+spec:
+  inputs:
+    - name: name
+      type: string
+      required: true
+      description: AKS cluster name (from foundation/naming).
+      semantic: foundation-naming
+    - name: resource_group_id
+      type: string
+      required: true
+      description: Resource ID of the resource group where the cluster is created (the AVM managed-cluster module is azapi-based and takes a parent resource ID).
+    - name: location
+      type: string
+      required: true
+      description: Azure region for the cluster.
+    - name: node_subnet_id
+      type: string
+      required: true
+      description: Subnet resource ID the system node pool joins (the platform spoke/hub network — ADR 0018).
+    - name: log_analytics_workspace_id
+      type: string
+      required: true
+      description: Resource ID of the substrate Log Analytics workspace that receives the cluster's diagnostics.
+      semantic: substrate-law
+    - name: admin_group_object_ids
+      type: list(string)
+      required: true
+      description: Entra group object IDs granted cluster-admin via Azure RBAC. Required because local accounts are disabled.
+    - name: tags
+      type: map(string)
+      required: true
+      description: Tag map from foundation/tags. Module validates the five required keys are present.
+      semantic: foundation-tags
+    - name: kubernetes_version
+      type: string
+      required: false
+      description: Kubernetes minor version (e.g. '1.30'); null lets AKS pick the region default.
+    - name: system_node_pool
+      type: object
+      required: false
+      description: System node pool shape (vm_size, node_count, autoscaler min/max, zones, max_pods, OS disk). Zone-redundant 3-node default.
+    - name: network
+      type: object
+      required: false
+      description: Tunable networking (policy engine and CIDRs). Fixed to Azure CNI overlay.
+    - name: private_dns_zone_id
+      type: string
+      required: false
+      description: Private DNS zone ID for the private API server (the hub's centralized zone — ADR 0018); null lets AKS manage it.
+    - name: authorized_ip_ranges
+      type: list(string)
+      required: false
+      description: CIDRs allowed to reach the API server, on top of the private endpoint.
+    - name: user_assigned_identity_id
+      type: string
+      required: false
+      description: Control-plane user-assigned identity (e.g. foundation/identity's deploy UAI); null uses system-assigned.
+    - name: upgrade_channel
+      type: string
+      required: false
+      description: AKS automatic upgrade channel for the Kubernetes version. Node-image upgrades are always on.
+      vocabulary: [none, patch, stable, rapid, node-image]
+
+  outputs:
+    - name: cluster_id
+      type: string
+      description: Managed cluster resource ID.
+    - name: cluster_name
+      type: string
+      description: Managed cluster name.
+    - name: oidc_issuer_url
+      type: string
+      description: OIDC issuer URL — the seam workloads federate into (web-api-aks consumes this).
+    - name: node_resource_group_name
+      type: string
+      description: Auto-created node resource group (MC_*).
+    - name: kubelet_identity
+      type: object
+      description: Kubelet identity (clientId/objectId/resourceId) for downstream grants such as AcrPull.
+
+  dependencies:
+    avm:
+      - source: Azure/avm-res-containerservice-managedcluster/azurerm
+        version: 0.6.1
+    repo: []
+
+  cross_cutting:
+    identity: true
+    observability: true
+    secrets: false
+    networking: true
+    naming: false
+    tagging: false
+
+  ships:
+    policy: []
+    monitoring: []
+    runbooks: []
+
+  cites:
+    principles:
+      - firmitas
+      - utilitas
+    decisions:
+      - ADR-0001
+      - ADR-0005
+      - ADR-0009
+      - ADR-0018
+      - ADR-0026
+    anti_patterns:
+      - AP-006
+
+  examples:
+    - name: minimal
+      description: Smallest viable cluster — required inputs only, hardened defaults applied.
+    - name: full
+      description: All tunables supplied — pinned Kubernetes version, autoscaling node pool, BYO control-plane identity, hub private DNS zone.
+
+  tests:
+    - name: contract_compliance
+      type: terraform_test
+      description: Hermetically applies the module under mock azurerm/azapi providers and confirms the documented outputs surface (the hardened posture itself is fixed in main.tf, not input-reachable).
+    - name: input_validation
+      type: terraform_test
+      description: Confirms invalid inputs (bad cluster name, empty admin groups, off-vocabulary upgrade channel, missing required tags, malformed subnet/workspace IDs) are rejected.

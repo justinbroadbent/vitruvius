@@ -13,7 +13,9 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
-  TF_VERSION: 1.9.8
+  # 1.14+ required by platform-services/aks-cluster (its AVM module pins ~> 1.14);
+  # every other module requires >= 1.9, which this satisfies.
+  TF_VERSION: 1.15.7
 
 jobs:
   # Modules and examples are discovered from the filesystem so a new module
